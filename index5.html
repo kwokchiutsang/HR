@@ -392,11 +392,9 @@
 
     function initApp() { initMonthSelect(); initYearJumper(); renderAll(); }
     function save() {
-        localStorage.setItem(DB_KEY, JSON.stringify(employees));
-        localStorage.setItem(DB_KEY+'_sch', JSON.stringify(schoolHols));
-        renderAll();
+    saveDataToFirestore();        renderAll();
     }
-    function renderAll() { renderDashboard(); renderTable(); renderEmpList(); }
+async function initApp() { await loadDataFromFirestore(); initMonthSelect(); initYearJumper(); renderAll(); }
     function nav(id) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
         document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('active'));
@@ -624,7 +622,7 @@
     }
     function addEmp() { let n=document.getElementById('new-name').value, s=document.getElementById('new-sch').value; if(n&&s) { employees.push({id:Date.now(), name:n, school:s, total:12, leaves:{}}); save(); document.getElementById('new-name').value=''; } }
     function delEmp(i) { if(confirm('刪除?')) { employees.splice(i,1); save(); } }
-    function resetSys() { if(confirm('重置?')) { localStorage.removeItem(DB_KEY); localStorage.removeItem(DB_KEY+'_sch'); location.reload(); } }
+async function resetSys() { if(confirm("重置系統？")) { try { await db.collection('hrData').doc('employees').delete(); await db.collection('hrData').doc('schoolHolidays').delete(); location.reload(); } catch(err) { console.error('重置系統失敗:', err); alert('重置失敗'); } } }
 </script>
 </body>
 </html>
