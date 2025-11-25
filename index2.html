@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>清潔公司 - 智能年假管理系統 V4.0</title>
+    <!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -168,6 +171,20 @@
     </div>
 
 <script>
+    // Firebase 設定
+const firebaseConfig = {
+    apiKey: "AIzaSyDuVyo0MVpQ8XJMYpLRQcj2kJ4_bdrVhGs",
+    authDomain: "hr-system-58d4d.firebaseapp.com",
+    projectId: "hr-system-58d4d",
+    storageBucket: "hr-system-58d4d.firebasestorage.app",
+    messagingSenderId: "841414140594",
+    appId: "1:841414140594:web:07059f6863379d18a55fab"
+};
+
+// 初始化 Firebase
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+
     // --- 1. 資料存取 ---
     const KEY_EMP = 'hr_v4_emp';
     const KEY_SCH = 'hr_v4_sch';
@@ -192,13 +209,46 @@
     let currentView = 'month'; // 'month' or 'year'
 
     // --- 2. 初始化 ---
-    window.onload = () => { renderAll(); };
+    window.onload = () => { loadData(); };
 
-    function saveData() {
+// 儲存數據到 Firebase
+async function saveData() {
+    try {
+        await db.collection('hrData2').doc('employees').set({ data: employees });
+        await db.collection('hrData2').doc('schoolHolidays').set({ data: schoolHolidays });
+        renderAll();
+        console.log('數據已同步到 Firebase');
+    } catch (error) {
+        console.error('儲存數據錯誤:', error);
+        // 回退到 localStorage
         localStorage.setItem(KEY_EMP, JSON.stringify(employees));
         localStorage.setItem(KEY_SCH, JSON.stringify(schoolHolidays));
         renderAll();
     }
+}
+
+    // 從 Firebase 讀取數據
+async function loadData() {
+    try {
+        const empDoc = await db.collection('hrData2').doc('employees').get();
+        const schDoc = await db.collection('hrData2').doc('schoolHolidays').get();
+        
+        if (empDoc.exists) {
+            employees = empDoc.data().data || defaultEmps;
+        }
+        if (schDoc.exists) {
+            schoolHolidays = schDoc.data().data || defaultSch;
+        }
+        renderAll();
+        console.log('從 Firebase 讀取數據成功');
+    } catch (error) {
+        console.error('讀取數據錯誤:', error);
+        // 回退到 localStorage
+        employees = JSON.parse(localStorage.getItem(KEY_EMP)) || defaultEmps;
+        schoolHolidays = JSON.parse(localStorage.getItem(KEY_SCH)) || defaultSch;
+        renderAll();
+    }
+}
 
     function renderAll() {
         renderDashboard();
