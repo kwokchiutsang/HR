@@ -280,6 +280,63 @@
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
 
+            // Firestore 數據操作函數
+        let employees = [];
+        let schoolHols = {};
+        
+        // 從Firestore加載數據
+        async function loadDataFromFirestore() {
+            try {
+                // 加載員工數據
+                const empDoc = await db.collection('hrData').doc('employees').get();
+                if (empDoc.exists) {
+                    employees = empDoc.data().list || [];
+                } else {
+                    // 如果沒有數據，使用默認數據
+                    employees = [
+                        {id:1, name:"陳大文", school:"聖保羅", total:14, leaves:{}},
+                        {id:2, name:"李阿姨", school:"聖保羅", total:7, leaves:{}},
+                        {id:3, name:"張三", school:"聖保羅", total:7, leaves:{}}
+                    ];
+                }
+                
+                // 加載學校假期數據
+                const holsDoc = await db.collection('hrData').doc('schoolHolidays').get();
+                if (holsDoc.exists) {
+                    schoolHols = holsDoc.data().holidays || {};
+                }
+            } catch (error) {
+                console.error('加載Firestore數據失敗:', error);
+                // 如果失敗，使用默認數據
+                employees = [
+                    {id:1, name:"陳大文", school:"聖保羅", total:14, leaves:{}},
+                    {id:2, name:"李阿姨", school:"聖保羅", total:7, leaves:{}},
+                    {id:3, name:"張三", school:"聖保羅", total:7, leaves:{}}
+                ];
+            }
+        }
+        
+        // 保存數據到Firestore
+        async function saveDataToFirestore() {
+            try {
+                // 保存員工數據
+                await db.collection('hrData').doc('employees').set({
+                    list: employees,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                // 保存學校假期數據
+                await db.collection('hrData').doc('schoolHolidays').set({
+                    holidays: schoolHols,
+                    updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                console.log('數據已保存到Firestore');
+            } catch (error) {
+                console.error('保存Firestore數據失敗:', error);
+            }
+        }
+
     // 1. 登入設定
     const CREDENTIALS = { user: "philip", pass: "60986314" };
 
