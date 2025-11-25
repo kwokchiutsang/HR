@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HR 年假管理系統</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --bg-color: #f4f7f6;
+            --text-color: #333;
+            --sidebar-width: 240px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            display: flex;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            min-height: 100vh;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background-color: var(--primary-color);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            position: fixed;
+            height: 100%;
+        }
+
+        .sidebar h2 {
+            margin-bottom: 30px;
+            font-size: 1.5rem;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            padding-bottom: 15px;
+        }
+
+        .menu-item {
+            padding: 15px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin-bottom: 10px;
+            transition: background 0.3s;
+        }
+
+        .menu-item:hover, .menu-item.active {
+            background-color: var(--secondary-color);
+        }
+
+        /* Main Content */
+        .main-content {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 30px;
+            width: calc(100% - var(--sidebar-width));
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .card-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            text-align: center;
+        }
+
+        .card h3 {
+            font-size: 2rem;
+            color: var(--secondary-color);
+            margin-bottom: 5px;
+        }
+
+        .section {
+            display: none;
+            background: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        h2.section-title {
+            margin-bottom: 20px;
+            color: var(--primary-color);
+            border-left: 5px solid var(--secondary-color);
+            padding-left: 10px;
+        }
+
+        /* Forms & Inputs */
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            transition: opacity 0.3s;
+        }
+
+        .btn-primary {
+            background-color: var(--secondary-color);
+            color: white;
+        }
+
+        .btn-danger {
+            background-color: var(--accent-color);
+            color: white;
+            padding: 5px 10px;
+            font-size: 0.9rem;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            color: var(--primary-color);
+        }
+
+        .status-badge {
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            color: white;
+        }
+        .bg-green { background-color: #27ae60; }
+        .bg-orange { background-color: #f39c12; }
+        .bg-red { background-color: #c0392b; }
+
+        /* Utility */
+        .flex-row {
+            display: flex;
+            gap: 15px;
+        }
+        .flex-half {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>HR 管理系統</h2>
+        <div class="menu-item active" onclick="showSection('dashboard')">📊 儀表板</div>
+        <div class="menu-item" onclick="showSection('employees')">👥 員工管理</div>
+        <div class="menu-item" onclick="showSection('leave-apply')">📝 休假申請</div>
+        <div class="menu-item" onclick="showSection('leave-history')">🕒 休假紀錄</div>
+    </div>
+
+    <div class="main-content">
+        <div class="header">
+            <h1>歡迎回來，管理員</h1>
+            <button class="btn-danger" onclick="resetSystem()">重置系統數據</button>
+        </div>
+
+        <div id="dashboard" class="section active">
+            <h2 class="section-title">系統概覽</h2>
+            <div class="card-container">
+                <div class="card">
+                    <h3 id="total-employees">0</h3>
+                    <p>員工總數</p>
+                </div>
+                <div class="card">
+                    <h3 id="total-leaves-taken">0</h3>
+                    <p>已休總天數</p>
+                </div>
+                <div class="card">
+                    <h3 id="employees-on-leave">0</h3>
+                    <p>今日休假人數</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="employees" class="section">
+            <h2 class="section-title">員工名單 & 年假設定</h2>
+            
+            <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+                <h4>新增員工</h4>
+                <div class="flex-row" style="margin-top:10px;">
+                    <input type="text" id="new-emp-name" placeholder="姓名" class="flex-half">
+                    <input type="text" id="new-emp-dept" placeholder="部門" class="flex-half">
+                    <input type="number" id="new-emp-quota" placeholder="年假額度 (天)" class="flex-half" value="12">
+                    <button class="btn-primary" onclick="addEmployee()">新增</button>
+                </div>
+            </div>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>姓名</th>
+                        <th>部門</th>
+                        <th>年假總額</th>
+                        <th>已用天數</th>
+                        <th>剩餘天數</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="employee-table-body">
+                    </tbody>
+            </table>
+        </div>
+
+        <div id="leave-apply" class="section">
+            <h2 class="section-title">提交休假申請</h2>
+            <div class="form-group">
+                <label>選擇員工</label>
+                <select id="leave-emp-select">
+                    <option value="">請選擇員工...</option>
+                </select>
+            </div>
+            <div class="flex-row form-group">
+                <div class="flex-half">
+                    <label>開始日期</label>
+                    <input type="date" id="leave-start">
+                </div>
+                <div class="flex-half">
+                    <label>結束日期</label>
+                    <input type="date" id="leave-end">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>休假類型</label>
+                <select id="leave-type">
+                    <option value="Annual">年假 (扣除額度)</option>
+                    <option value="Sick">病假</option>
+                    <option value="Unpaid">無薪假</option>
+                    <option value="Other">其他</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>原因備註</label>
+                <input type="text" id="leave-reason" placeholder="例如：處理私事">
+            </div>
+            <button class="btn-primary" onclick="submitLeave()">提交申請</button>
+        </div>
+
+        <div id="leave-history" class="section">
+            <h2 class="section-title">休假歷史紀錄</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>日期</th>
+                        <th>員工姓名</th>
+                        <th>類型</th>
+                        <th>期間</th>
+                        <th>天數</th>
+                        <th>狀態</th>
+                    </tr>
+                </thead>
+                <tbody id="history-table-body">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        // Data Storage
+        let employees = JSON.parse(localStorage.getItem('hr_employees')) || [];
+        let leaveLogs = JSON.parse(localStorage.getItem('hr_leaveLogs')) || [];
+
+        // Initial Render
+        window.onload = function() {
+            renderAll();
+        };
+
+        // --- Navigation Logic ---
+        function showSection(sectionId) {
+            // Hide all sections
+            document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
+            document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
+
+            // Show target section
+            document.getElementById(sectionId).classList.add('active');
+            
+            // Highlight sidebar
+            const menuIndex = ['dashboard', 'employees', 'leave-apply', 'leave-history'].indexOf(sectionId);
+            if(menuIndex !== -1) {
+                document.querySelectorAll('.menu-item')[menuIndex].classList.add('active');
+            }
+            
+            renderAll();
+        }
+
+        // --- Core Logic Functions ---
+
+        function saveData() {
+            localStorage.setItem('hr_employees', JSON.stringify(employees));
+            localStorage.setItem('hr_leaveLogs', JSON.stringify(leaveLogs));
+            renderAll();
+        }
+
+        function addEmployee() {
+            const name = document.getElementById('new-emp-name').value;
+            const dept = document.getElementById('new-emp-dept').value;
+            const quota = parseFloat(document.getElementById('new-emp-quota').value);
+
+            if (!name || !dept || isNaN(quota)) {
+                alert("請填寫完整員工資訊");
+                return;
+            }
+
+            const newEmp = {
+                id: Date.now(), // Simple ID generation
+                name: name,
+                dept: dept,
+                quota: quota,
+                used: 0
+            };
+
+            employees.push(newEmp);
+            
+            // Clear inputs
+            document.getElementById('new-emp-name').value = '';
+            document.getElementById('new-emp-dept').value = '';
+            
+            saveData();
+            alert("員工新增成功！");
+        }
+
+        function deleteEmployee(id) {
+            if(confirm("確定要刪除這位員工嗎？這將無法復原。")) {
+                employees = employees.filter(emp => emp.id !== id);
+                saveData();
+            }
+        }
+
+        function submitLeave() {
+            const empId = parseInt(document.getElementById('leave-emp-select').value);
+            const start = document.getElementById('leave-start').value;
+            const end = document.getElementById('leave-end').value;
+            const type = document.getElementById('leave-type').value;
+            const reason = document.getElementById('leave-reason').value;
+
+            if (!empId || !start || !end) {
+                alert("請填寫必要欄位");
+                return;
+            }
+
+            const startDate = new Date(start);
+            const endDate = new Date(end);
+            
+            if (endDate < startDate) {
+                alert("結束日期不能早於開始日期");
+                return;
+            }
+
+            // Calculate days (inclusive)
+            const diffTime = Math.abs(endDate - startDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
+
+            // Find Employee
+            const empIndex = employees.findIndex(e => e.id === empId);
+            if (empIndex === -1) return;
+
+            // Check Balance for Annual Leave
+            if (type === 'Annual') {
+                const currentEmp = employees[empIndex];
+                if (currentEmp.used + diffDays > currentEmp.quota) {
+                    alert(`餘額不足！該員工剩餘 ${currentEmp.quota - currentEmp.used} 天，但申請了 ${diffDays} 天。`);
+                    return;
+                }
+                employees[empIndex].used += diffDays;
+            }
+
+            // Create Log
+            const log = {
+                id: Date.now(),
+                empId: empId,
+                empName: employees[empIndex].name,
+                startDate: start,
+                endDate: end,
+                days: diffDays,
+                type: type,
+                reason: reason,
+                timestamp: new Date().toLocaleString()
+            };
+
+            leaveLogs.unshift(log); // Add to top
+            saveData();
+            
+            alert(`休假申請成功！共計 ${diffDays} 天。`);
+            
+            // Reset form
+            document.getElementById('leave-reason').value = '';
+        }
+
+        function resetSystem() {
+            if(confirm("警告：這將清除所有員工和休假資料！確定嗎？")) {
+                localStorage.clear();
+                employees = [];
+                leaveLogs = [];
+                renderAll();
+                location.reload();
+            }
+        }
+
+        // --- Rendering Functions ---
+
+        function renderAll() {
+            renderDashboard();
+            renderEmployeeTable();
+            renderLeaveSelect();
+            renderHistoryTable();
+        }
+
+        function renderDashboard() {
+            document.getElementById('total-employees').innerText = employees.length;
+            
+            // Calculate total leaves taken (sum of all days in logs)
+            const totalTaken = leaveLogs.reduce((sum, log) => sum + log.days, 0);
+            document.getElementById('total-leaves-taken').innerText = totalTaken;
+
+            // Check how many on leave today
+            const today = new Date().toISOString().split('T')[0];
+            const onLeaveToday = leaveLogs.filter(log => {
+                return today >= log.startDate && today <= log.endDate;
+            }).length;
+            document.getElementById('employees-on-leave').innerText = onLeaveToday;
+        }
+
+        function renderEmployeeTable() {
+            const tbody = document.getElementById('employee-table-body');
+            tbody.innerHTML = '';
+
+            employees.forEach(emp => {
+                const remaining = (emp.quota - emp.used).toFixed(1);
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${emp.id}</td>
+                    <td><strong>${emp.name}</strong></td>
+                    <td>${emp.dept}</td>
+                    <td>${emp.quota}</td>
+                    <td style="color: #e74c3c;">${emp.used}</td>
+                    <td style="color: #27ae60; font-weight:bold;">${remaining}</td>
+                    <td><button class="btn-danger" onclick="deleteEmployee(${emp.id})">刪除</button></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function renderLeaveSelect() {
+            const select = document.getElementById('leave-emp-select');
+            // Keep the first option
+            select.innerHTML = '<option value="">請選擇員工...</option>';
+            
+            employees.forEach(emp => {
+                const option = document.createElement('option');
+                option.value = emp.id;
+                option.text = `${emp.name} (剩餘: ${emp.quota - emp.used} 天)`;
+                select.appendChild(option);
+            });
+        }
+
+        function renderHistoryTable() {
+            const tbody = document.getElementById('history-table-body');
+            tbody.innerHTML = '';
+
+            leaveLogs.forEach(log => {
+                let badgeClass = 'bg-green';
+                if (log.type === 'Annual') badgeClass = 'bg-green';
+                else if (log.type === 'Sick') badgeClass = 'bg-orange';
+                else badgeClass = 'bg-red';
+
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${log.timestamp.split(' ')[0]}</td>
+                    <td>${log.empName}</td>
+                    <td><span class="status-badge ${badgeClass}">${translateType(log.type)}</span></td>
+                    <td>${log.startDate} ~ ${log.endDate}</td>
+                    <td>${log.days} 天</td>
+                    <td>已核准</td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        function translateType(type) {
+            const map = {
+                'Annual': '年假',
+                'Sick': '病假',
+                'Unpaid': '無薪假',
+                'Other': '其他'
+            };
+            return map[type] || type;
+        }
+
+        // Dummy data for first run (optional)
+        if (employees.length === 0) {
+            // Uncomment below lines if you want demo data on first load
+            // employees.push({id: 101, name: '陳大文', dept: '清潔部', quota: 12, used: 2});
+            // employees.push({id: 102, name: '李小美', dept: '行政部', quota: 14, used: 0});
+            // saveData();
+        }
+    </script>
+</body>
+</html>
