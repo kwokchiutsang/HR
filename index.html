@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HR 年假管理系統</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -28,7 +31,6 @@
             min-height: 100vh;
         }
 
-        /* Sidebar */
         .sidebar {
             width: var(--sidebar-width);
             background-color: var(--primary-color);
@@ -60,7 +62,6 @@
             background-color: var(--secondary-color);
         }
 
-        /* Main Content */
         .main-content {
             margin-left: var(--sidebar-width);
             flex: 1;
@@ -115,7 +116,6 @@
             padding-left: 10px;
         }
 
-        /* Forms & Inputs */
         .form-group {
             margin-bottom: 15px;
         }
@@ -159,7 +159,6 @@
             opacity: 0.9;
         }
 
-        /* Tables */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -187,13 +186,23 @@
         .bg-orange { background-color: #f39c12; }
         .bg-red { background-color: #c0392b; }
 
-        /* Utility */
         .flex-row {
             display: flex;
             gap: 15px;
         }
         .flex-half {
             flex: 1;
+        }
+        .sync-status {
+            font-size: 0.8rem;
+            color: #666;
+            margin-left: 10px;
+        }
+        .sync-status.syncing {
+            color: #f39c12;
+        }
+        .sync-status.synced {
+            color: #27ae60;
         }
     </style>
 </head>
@@ -209,7 +218,7 @@
 
     <div class="main-content">
         <div class="header">
-            <h1>歡迎回來，管理員</h1>
+            <h1>歡迎回來，管理員 <span id="sync-indicator" class="sync-status"></span></h1>
             <button class="btn-danger" onclick="resetSystem()">重置系統數據</button>
         </div>
 
@@ -233,7 +242,6 @@
 
         <div id="employees" class="section">
             <h2 class="section-title">員工名單 & 年假設定</h2>
-            
             <div style="background: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
                 <h4>新增員工</h4>
                 <div class="flex-row" style="margin-top:10px;">
@@ -243,7 +251,6 @@
                     <button class="btn-primary" onclick="addEmployee()">新增</button>
                 </div>
             </div>
-
             <table>
                 <thead>
                     <tr>
@@ -256,8 +263,7 @@
                         <th>操作</th>
                     </tr>
                 </thead>
-                <tbody id="employee-table-body">
-                    </tbody>
+                <tbody id="employee-table-body"></tbody>
             </table>
         </div>
 
@@ -308,45 +314,96 @@
                         <th>狀態</th>
                     </tr>
                 </thead>
-                <tbody id="history-table-body">
-                    </tbody>
+                <tbody id="history-table-body"></tbody>
             </table>
         </div>
     </div>
 
     <script>
+        // Firebase 設定
+        const firebaseConfig = {
+            apiKey: "AIzaSyDuVyo0MVpQ8XJMYpLRQcj2kJ4_bdrVhGs",
+            authDomain: "hr-system-58d4d.firebaseapp.com",
+            projectId: "hr-system-58d4d",
+            storageBucket: "hr-system-58d4d.firebasestorage.app",
+            messagingSenderId: "841414140594",
+            appId: "1:841414140594:web:07059f6863379d18a55fab"
+        };
+
+        // 初始化 Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
         // Data Storage
-        let employees = JSON.parse(localStorage.getItem('hr_employees')) || [];
-        let leaveLogs = JSON.parse(localStorage.getItem('hr_leaveLogs')) || [];
+        let employees = [];
+        let leaveLogs = [];
+
+        // 同步狀態指示
+        function setSyncStatus(status) {
+            const indicator = document.getElementById('sync-indicator');
+            if (status === 'syncing') {
+                indicator.textContent = '⚙️ 同步中...';
+                indicator.className = 'sync-status syncing';
+            } else if (status === 'synced') {
+                indicator.textContent = '✅ 已同步';
+                indicator.className = 'sync-status synced';
+                setTimeout(() => { indicator.textContent = ''; }, 2000);
+            } else {
+                indicator.textContent = '';
+            }
+        }
+
+        // 從 Firebase 讀取數據
+        async function loadData() {
+            try {
+                setSyncStatus('syncing');
+                const empDoc = await db.collection('hrData').doc('employees').get();
+                const leaveDoc = await db.collection('hrData').doc('leaveLogs').get();
+                
+                if (empDoc.exists) {
+                    employees = empDoc.data().data || [];
+                }
+                if (leaveDoc.exists) {
+                    leaveLogs = leaveDoc.data().data || [];
+                }
+                
+                renderAll();
+                setSyncStatus('synced');
+            } catch (error) {
+                console.error('讀取數據錯誤:', error);
+                setSyncStatus('');
+            }
+        }
+
+        // 儲存數據到 Firebase
+        async function saveData() {
+            try {
+                setSyncStatus('syncing');
+                await db.collection('hrData').doc('employees').set({ data: employees });
+                await db.collection('hrData').doc('leaveLogs').set({ data: leaveLogs });
+                renderAll();
+                setSyncStatus('synced');
+            } catch (error) {
+                console.error('儲存數據錯誤:', error);
+                alert('儲存失敗，請檢查網絡連線');
+                setSyncStatus('');
+            }
+        }
 
         // Initial Render
         window.onload = function() {
-            renderAll();
+            loadData();
         };
 
-        // --- Navigation Logic ---
+        // Navigation Logic
         function showSection(sectionId) {
-            // Hide all sections
             document.querySelectorAll('.section').forEach(sec => sec.classList.remove('active'));
             document.querySelectorAll('.menu-item').forEach(item => item.classList.remove('active'));
-
-            // Show target section
             document.getElementById(sectionId).classList.add('active');
-            
-            // Highlight sidebar
             const menuIndex = ['dashboard', 'employees', 'leave-apply', 'leave-history'].indexOf(sectionId);
             if(menuIndex !== -1) {
                 document.querySelectorAll('.menu-item')[menuIndex].classList.add('active');
             }
-            
-            renderAll();
-        }
-
-        // --- Core Logic Functions ---
-
-        function saveData() {
-            localStorage.setItem('hr_employees', JSON.stringify(employees));
-            localStorage.setItem('hr_leaveLogs', JSON.stringify(leaveLogs));
             renderAll();
         }
 
@@ -356,12 +413,12 @@
             const quota = parseFloat(document.getElementById('new-emp-quota').value);
 
             if (!name || !dept || isNaN(quota)) {
-                alert("請填寫完整員工資訊");
+                alert('請填寫完整員工資訊');
                 return;
             }
 
             const newEmp = {
-                id: Date.now(), // Simple ID generation
+                id: Date.now(),
                 name: name,
                 dept: dept,
                 quota: quota,
@@ -369,17 +426,14 @@
             };
 
             employees.push(newEmp);
-            
-            // Clear inputs
             document.getElementById('new-emp-name').value = '';
             document.getElementById('new-emp-dept').value = '';
-            
             saveData();
-            alert("員工新增成功！");
+            alert('員工新增成功！');
         }
 
         function deleteEmployee(id) {
-            if(confirm("確定要刪除這位員工嗎？這將無法復原。")) {
+            if(confirm('確定要刪除這位員工嗎？')) {
                 employees = employees.filter(emp => emp.id !== id);
                 saveData();
             }
@@ -393,7 +447,7 @@
             const reason = document.getElementById('leave-reason').value;
 
             if (!empId || !start || !end) {
-                alert("請填寫必要欄位");
+                alert('請填寫必要欄位');
                 return;
             }
 
@@ -401,29 +455,25 @@
             const endDate = new Date(end);
             
             if (endDate < startDate) {
-                alert("結束日期不能早於開始日期");
+                alert('結束日期不能早於開始日期');
                 return;
             }
 
-            // Calculate days (inclusive)
             const diffTime = Math.abs(endDate - startDate);
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; 
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
-            // Find Employee
             const empIndex = employees.findIndex(e => e.id === empId);
             if (empIndex === -1) return;
 
-            // Check Balance for Annual Leave
             if (type === 'Annual') {
                 const currentEmp = employees[empIndex];
                 if (currentEmp.used + diffDays > currentEmp.quota) {
-                    alert(`餘額不足！該員工剩餘 ${currentEmp.quota - currentEmp.used} 天，但申請了 ${diffDays} 天。`);
+                    alert('餘額不足！該員工剩餘 ' + (currentEmp.quota - currentEmp.used) + ' 天');
                     return;
                 }
                 employees[empIndex].used += diffDays;
             }
 
-            // Create Log
             const log = {
                 id: Date.now(),
                 empId: empId,
@@ -436,26 +486,20 @@
                 timestamp: new Date().toLocaleString()
             };
 
-            leaveLogs.unshift(log); // Add to top
+            leaveLogs.unshift(log);
             saveData();
-            
-            alert(`休假申請成功！共計 ${diffDays} 天。`);
-            
-            // Reset form
+            alert('休假申請成功！共計 ' + diffDays + ' 天。');
             document.getElementById('leave-reason').value = '';
         }
 
-        function resetSystem() {
-            if(confirm("警告：這將清除所有員工和休假資料！確定嗎？")) {
-                localStorage.clear();
+        async function resetSystem() {
+            if(confirm('警告：這將清除所有員工和休假資料！確定嗎？')) {
                 employees = [];
                 leaveLogs = [];
-                renderAll();
+                await saveData();
                 location.reload();
             }
         }
-
-        // --- Rendering Functions ---
 
         function renderAll() {
             renderDashboard();
@@ -466,48 +510,31 @@
 
         function renderDashboard() {
             document.getElementById('total-employees').innerText = employees.length;
-            
-            // Calculate total leaves taken (sum of all days in logs)
             const totalTaken = leaveLogs.reduce((sum, log) => sum + log.days, 0);
             document.getElementById('total-leaves-taken').innerText = totalTaken;
-
-            // Check how many on leave today
             const today = new Date().toISOString().split('T')[0];
-            const onLeaveToday = leaveLogs.filter(log => {
-                return today >= log.startDate && today <= log.endDate;
-            }).length;
+            const onLeaveToday = leaveLogs.filter(log => today >= log.startDate && today <= log.endDate).length;
             document.getElementById('employees-on-leave').innerText = onLeaveToday;
         }
 
         function renderEmployeeTable() {
             const tbody = document.getElementById('employee-table-body');
             tbody.innerHTML = '';
-
             employees.forEach(emp => {
                 const remaining = (emp.quota - emp.used).toFixed(1);
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${emp.id}</td>
-                    <td><strong>${emp.name}</strong></td>
-                    <td>${emp.dept}</td>
-                    <td>${emp.quota}</td>
-                    <td style="color: #e74c3c;">${emp.used}</td>
-                    <td style="color: #27ae60; font-weight:bold;">${remaining}</td>
-                    <td><button class="btn-danger" onclick="deleteEmployee(${emp.id})">刪除</button></td>
-                `;
+                tr.innerHTML = '<td>' + emp.id + '</td><td><strong>' + emp.name + '</strong></td><td>' + emp.dept + '</td><td>' + emp.quota + '</td><td style="color:#e74c3c;">' + emp.used + '</td><td style="color:#27ae60;font-weight:bold;">' + remaining + '</td><td><button class="btn-danger" onclick="deleteEmployee(' + emp.id + ')">刪除</button></td>';
                 tbody.appendChild(tr);
             });
         }
 
         function renderLeaveSelect() {
             const select = document.getElementById('leave-emp-select');
-            // Keep the first option
             select.innerHTML = '<option value="">請選擇員工...</option>';
-            
             employees.forEach(emp => {
                 const option = document.createElement('option');
                 option.value = emp.id;
-                option.text = `${emp.name} (剩餘: ${emp.quota - emp.used} 天)`;
+                option.text = emp.name + ' (剩餘: ' + (emp.quota - emp.used) + ' 天)';
                 select.appendChild(option);
             });
         }
@@ -515,42 +542,19 @@
         function renderHistoryTable() {
             const tbody = document.getElementById('history-table-body');
             tbody.innerHTML = '';
-
             leaveLogs.forEach(log => {
                 let badgeClass = 'bg-green';
-                if (log.type === 'Annual') badgeClass = 'bg-green';
-                else if (log.type === 'Sick') badgeClass = 'bg-orange';
-                else badgeClass = 'bg-red';
-
+                if (log.type === 'Sick') badgeClass = 'bg-orange';
+                else if (log.type !== 'Annual') badgeClass = 'bg-red';
                 const tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>${log.timestamp.split(' ')[0]}</td>
-                    <td>${log.empName}</td>
-                    <td><span class="status-badge ${badgeClass}">${translateType(log.type)}</span></td>
-                    <td>${log.startDate} ~ ${log.endDate}</td>
-                    <td>${log.days} 天</td>
-                    <td>已核准</td>
-                `;
+                tr.innerHTML = '<td>' + log.timestamp.split(' ')[0] + '</td><td>' + log.empName + '</td><td><span class="status-badge ' + badgeClass + '">' + translateType(log.type) + '</span></td><td>' + log.startDate + ' ~ ' + log.endDate + '</td><td>' + log.days + ' 天</td><td>已核准</td>';
                 tbody.appendChild(tr);
             });
         }
 
         function translateType(type) {
-            const map = {
-                'Annual': '年假',
-                'Sick': '病假',
-                'Unpaid': '無薪假',
-                'Other': '其他'
-            };
+            const map = { 'Annual': '年假', 'Sick': '病假', 'Unpaid': '無薪假', 'Other': '其他' };
             return map[type] || type;
-        }
-
-        // Dummy data for first run (optional)
-        if (employees.length === 0) {
-            // Uncomment below lines if you want demo data on first load
-            // employees.push({id: 101, name: '陳大文', dept: '清潔部', quota: 12, used: 2});
-            // employees.push({id: 102, name: '李小美', dept: '行政部', quota: 14, used: 0});
-            // saveData();
         }
     </script>
 </body>
