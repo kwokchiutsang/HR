@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>清潔公司 - 智能年假系統 V5.0 (行動版)</title>
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --secondary-color: #3498db;
+            --accent-color: #e74c3c;
+            --bg-color: #f4f7f6;
+            --sidebar-width: 240px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", sans-serif; }
+        
+        body { display: flex; background-color: var(--bg-color); height: 100vh; overflow: hidden; }
+
+        /* --- 1. 響應式佈局 (關鍵修改) --- */
+        /* 預設 (電腦版) */
+        .sidebar { width: var(--sidebar-width); background-color: var(--primary-color); color: white; display: flex; flex-direction: column; padding: 20px; flex-shrink: 0; overflow-y: auto; z-index: 100; }
+        .main-content { flex: 1; padding: 20px; display: flex; flex-direction: column; overflow-y: auto; position: relative; }
+
+        /* 手機版適配 (螢幕小於 768px) */
+        @media (max-width: 768px) {
+            body { flex-direction: column; }
+            .sidebar { 
+                width: 100%; 
+                height: auto; 
+                flex-direction: row; 
+                padding: 10px; 
+                overflow-x: auto; /* 允許橫向滑動 */
+                white-space: nowrap;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            }
+            .sidebar h2 { display: none; } /* 手機版隱藏標題省空間 */
+            .menu-item { margin-bottom: 0; margin-right: 10px; padding: 8px 12px; font-size: 14px; }
+            .main-content { padding: 10px; }
+            .card-container { grid-template-columns: 1fr 1fr; } /* 手機版卡片並排 */
+        }
+
+        .menu-item { padding: 12px; cursor: pointer; border-radius: 5px; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; transition: 0.2s; background: rgba(255,255,255,0.05); }
+        .menu-item:hover, .menu-item.active { background-color: var(--secondary-color); }
+
+        /* --- 2. 視圖與表格 --- */
+        .section { display: none; height: 100%; flex-direction: column; }
+        .section.active { display: flex; }
+
+        /* 月份跳轉條 (新增) */
+        .month-jumper {
+            display: flex;
+            gap: 5px;
+            overflow-x: auto;
+            padding: 5px 0;
+            margin-bottom: 5px;
+            -webkit-overflow-scrolling: touch; /* iOS 滑動慣性 */
+        }
+        .jump-btn {
+            background: white; border: 1px solid #ccc; padding: 5px 10px; 
+            border-radius: 15px; font-size: 12px; white-space: nowrap; flex-shrink: 0;
+        }
+        .jump-btn:active { background: #eee; }
+
+        .table-wrapper { 
+            flex: 1; 
+            overflow: auto; 
+            background: white; 
+            border: 1px solid #ddd; 
+            border-radius: 8px; 
+            position: relative;
+            -webkit-overflow-scrolling: touch; /* 關鍵：讓手機滑動表格有慣性 */
+        }
+
+        /* 表格樣式 */
+        table { border-collapse: separate; border-spacing: 0; font-size: 13px; table-layout: fixed; }
+        th, td { border-bottom: 1px solid #eee; border-right: 1px solid #eee; padding: 4px; text-align: center; vertical-align: middle; height: 35px; box-sizing: border-box; }
+        
+        /* 凍結窗格設定 */
+        thead { position: sticky; top: 0; z-index: 30; background: #fff; }
+        .sticky-col { position: sticky; z-index: 20; background-color: #f8f9fa; border-right: 2px solid #ccc !important; }
+        
+        /* 手機版調整：員工欄位寬度 */
+        .col-name { left: 0; width: 70px; } 
+        .col-sch { left: 70px; width: 60px; font-size: 10px; overflow: hidden; text-overflow: ellipsis; }
+        
+        thead th.sticky-col { z-index: 40; background-color: var(--primary-color); color: white; }
+
+        /* 狀態顏色 */
+        .school-holiday { background-color: #d4edda !important; }
+        .on-leave { background-color: #f8d7da !important; }
+        .weekend { background-color: #fafafa; color: #ccc; }
+        .month-divider { border-right: 2px solid #333 !important; }
+
+        /* 全年視圖微調 (手機優化) */
+        .yearly-view th, .yearly-view td { padding: 0; font-size: 10px; height: 25px; min-width: 20px; }
+        
+        /* 控制面板 */
+        .roster-header { background: white; padding: 10px; border-radius: 8px 8px 0 0; border-bottom: 1px solid #eee; }
+        .control-row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-bottom: 5px; }
+        
+        /* 其他 UI */
+        .card-container { display: grid; gap: 10px; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); margin-bottom: 20px; }
+        .card { background: white; padding: 15px; border-radius: 8px; text-align: center; border-left: 4px solid var(--secondary-color); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .card h3 { font-size: 1.5rem; margin: 5px 0; color: var(--primary-color); }
+        
+        input, select { padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .btn { padding: 8px 12px; border: none; border-radius: 4px; color: white; font-size: 14px; }
+        .btn-primary { background: var(--secondary-color); }
+        .btn-danger { background: var(--accent-color); }
+
+        /* 衝突提示 */
+        #alert-area { background: #fff3cd; color: #856404; padding: 10px; margin-bottom: 5px; font-size: 12px; border-radius: 5px; display: none; }
+    </style>
+</head>
+<body>
+
+    <div class="sidebar">
+        <h2>🧹 清潔公司 HR</h2>
+        <div class="menu-item active" onclick="showSection('dashboard')">📊 儀表板</div>
+        <div class="menu-item" onclick="showSection('roster')">🗓️ 排班表</div>
+        <div class="menu-item" onclick="showSection('employees')">👥 員工</div>
+        <div class="menu-item" onclick="resetSystem()" style="background:#c0392b; color:white;">⚠️ 重置</div>
+    </div>
+
+    <div class="main-content">
+        
+        <div id="dashboard" class="section active">
+            <h3 style="margin-bottom:10px; color:var(--primary-color);">管理概況</h3>
+            <div class="card-container">
+                <div class="card">
+                    <h3 id="dash-total">0</h3><p>員工總數</p>
+                </div>
+                <div class="card">
+                    <h3 id="dash-leave">0</h3><p>今日休假</p>
+                </div>
+                <div class="card">
+                    <h3 id="dash-remain">0</h3><p>平均餘額</p>
+                </div>
+            </div>
+            <div style="background:white; padding:15px; border-radius:8px; font-size:14px; color:#555;">
+                <p>💡 <strong>手機操作提示：</strong></p>
+                <p>• 點擊上方選單切換頁面。</p>
+                <p>• 在「排班表」中，可左右滑動查看所有月份。</p>
+                <p>• 使用「月份跳轉」按鈕快速定位。</p>
+            </div>
+        </div>
+
+        <div id="roster" class="section">
+            <div class="roster-header">
+                <div class="control-row" style="justify-content: space-between;">
+                    <div style="display:flex; gap:5px;">
+                        <button class="btn btn-primary" id="btn-month-view" onclick="switchView('month')" style="opacity:1">月檢視</button>
+                        <button class="btn" id="btn-year-view" onclick="switchView('year')" style="background:#ddd; color:#333;">年總覽</button>
+                    </div>
+                    <select id="modeSelect" style="font-weight:bold; width:120px;">
+                        <option value="leave">排年假</option>
+                        <option value="holiday">設校假</option>
+                    </select>
+                </div>
+
+                <div id="month-selector-ui" class="control-row">
+                    <label>月份：</label>
+                    <select id="monthSelect" onchange="renderRoster()" style="flex:1;">
+                        <option value="1">1月</option><option value="2">2月</option><option value="3">3月</option>
+                        <option value="4">4月</option><option value="5">5月</option><option value="6">6月</option>
+                        <option value="7">7月</option><option value="8">8月</option><option value="9">9月</option>
+                        <option value="10">10月</option><option value="11" selected>11月</option><option value="12">12月</option>
+                    </select>
+                </div>
+
+                <div id="year-jumper-ui" class="month-jumper" style="display:none;">
+                    </div>
+            </div>
+
+            <div id="alert-area"></div>
+
+            <div class="table-wrapper" id="tableContainer">
+                <table id="rosterTable">
+                    <thead></thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="employees" class="section">
+            <h3 style="margin-bottom:10px;">員工名單</h3>
+            <div style="background:white; padding:10px; margin-bottom:10px; border-radius:8px; display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; gap:5px;">
+                    <input type="text" id="new-name" placeholder="姓名" style="flex:1">
+                    <input type="text" id="new-school" placeholder="學校" style="flex:1">
+                </div>
+                <div style="display:flex; gap:5px;">
+                    <input type="number" id="new-total" placeholder="年假" value="12" style="width:80px">
+                    <button class="btn btn-primary" onclick="addEmployee()" style="flex:1">新增員工</button>
+                </div>
+            </div>
+            <div style="overflow-x:auto;">
+                <table style="width:100%; background:white; border-collapse:collapse;">
+                    <thead>
+                        <tr style="background:#eee;"><th>姓名</th><th>學校</th><th>餘額</th><th>操作</th></tr>
+                    </thead>
+                    <tbody id="emp-list-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- 資料層 ---
+    const KEY_EMP = 'hr_v5_emp';
+    const KEY_SCH = 'hr_v5_sch';
+    const currentYear = 2025;
+    
+    // 預設資料
+    const defaultEmps = [
+        { id: "E1", name: "陳大文", school: "聖保羅", total: 14, leaves: {} },
+        { id: "E2", name: "李阿姨", school: "聖保羅", total: 7, leaves: {} },
+        { id: "E3", name: "張叔叔", school: "培正", total: 10, leaves: {} }
+    ];
+    const defaultSch = { "聖保羅": {11:{5:"測驗",6:"測驗"}}, "培正": {12:{20:"聖誕"}} };
+    const publicHolidays = {
+        1: {1:"元旦", 29:"初一", 30:"初二", 31:"初三"},
+        4: {4:"清明", 18:"受難", 19:"翌日", 21:"復活"},
+        5: {1:"勞動", 5:"佛誕"}, 6: {30:"端午"}, 7: {1:"回歸"},
+        10: {1:"國慶", 7:"重陽", 29:"中秋"}, 12: {25:"聖誕", 26:"拆禮"}
+    };
+
+    let employees = JSON.parse(localStorage.getItem(KEY_EMP)) || defaultEmps;
+    let schoolHolidays = JSON.parse(localStorage.getItem(KEY_SCH)) || defaultSch;
+    let currentView = 'month';
+
+    // --- 初始化 ---
+    window.onload = () => {
+        initYearJumper();
+        renderAll();
+    };
+
+    function saveData() {
+        localStorage.setItem(KEY_EMP, JSON.stringify(employees));
+        localStorage.setItem(KEY_SCH, JSON.stringify(schoolHolidays));
+        renderAll();
+    }
+
+    function renderAll() {
+        renderDashboard();
+        renderRoster();
+        renderEmployeeList();
+    }
+
+    // --- 導航與視圖 ---
+    function showSection(id) {
+        document.querySelectorAll('.section').forEach(d => d.classList.remove('active'));
+        document.querySelectorAll('.menu-item').forEach(d => d.classList.remove('active'));
+        document.getElementById(id).classList.add('active');
+        
+        // 簡單高亮對應 Menu
+        const map = {'dashboard':0, 'roster':1, 'employees':2};
+        if(map[id]!==undefined) document.querySelectorAll('.menu-item')[map[id]].classList.add('active');
+        
+        if(id === 'roster') setTimeout(renderRoster, 50); // 確保顯示後再渲染
+    }
+
+    function switchView(view) {
+        currentView = view;
+        const btnM = document.getElementById('btn-month-view');
+        const btnY = document.getElementById('btn-year-view');
+        const uiM = document.getElementById('month-selector-ui');
+        const uiY = document.getElementById('year-jumper-ui');
+        const table = document.getElementById('rosterTable');
+
+        if(view === 'month') {
+            btnM.style.background = 'var(--secondary-color)'; btnM.style.color = 'white';
+            btnY.style.background = '#ddd'; btnY.style.color = '#333';
+            uiM.style.display = 'flex';
+            uiY.style.display = 'none';
+            table.classList.remove('yearly-view');
+        } else {
+            btnY.style.background = 'var(--secondary-color)'; btnY.style.color = 'white';
+            btnM.style.background = '#ddd'; btnM.style.color = '#333';
+            uiM.style.display = 'none';
+            uiY.style.display = 'flex'; // 顯示跳轉條
+            table.classList.add('yearly-view');
+        }
+        renderRoster();
+    }
+
+    // 初始化年份跳轉按鈕
+    function initYearJumper() {
+        const container = document.getElementById('year-jumper-ui');
+        container.innerHTML = '';
+        for(let m=1; m<=12; m++) {
+            let btn = document.createElement('button');
+            btn.className = 'jump-btn';
+            btn.innerText = `${m}月`;
+            btn.onclick = () => scrollToMonth(m);
+            container.appendChild(btn);
+        }
+    }
+
+    // 手機版平滑滾動至該月份
+    function scrollToMonth(m) {
+        const th = document.getElementById(`header-m${m}`);
+        const container = document.getElementById('tableContainer');
+        if(th && container) {
+            // 計算位置：th.offsetLeft - 固定欄位寬度 (約130px)
+            let scrollLeft = th.offsetLeft - 130; 
+            if(scrollLeft < 0) scrollLeft = 0;
+            container.scrollTo({ left: scrollLeft, behavior: 'smooth' });
+        }
+    }
+
+    // --- 表格渲染核心 ---
+    function renderRoster() {
+        const thead = document.querySelector('#rosterTable thead');
+        const tbody = document.querySelector('#rosterTable tbody');
+        document.getElementById('alert-area').style.display = 'none';
+
+        if(currentView === 'month') {
+            // === 月檢視 ===
+            const month = parseInt(document.getElementById('monthSelect').value);
+            const daysInMonth = new Date(currentYear, month, 0).getDate();
+
+            // 表頭
+            let h1 = `<tr><th class="sticky-col col-name" rowspan="2">姓名</th><th class="sticky-col col-sch" rowspan="2">學校</th>`;
+            let h2 = `<tr>`;
+            for(let d=1; d<=daysInMonth; d++) {
+                let date = new Date(currentYear, month-1, d);
+                let dayName = date.toLocaleDateString('zh-HK',{weekday:'narrow'});
+                let color = (dayName==='六'||dayName==='日')?'#e74c3c':'#2c3e50';
+                h1 += `<th style="color:${color}; min-width:30px;">${d}<br><small>${dayName}</small></th>`;
+                let ph = (publicHolidays[month] && publicHolidays[month][d]) || "";
+                h2 += `<th style="font-size:10px; color:#d35400;">${ph}</th>`;
+            }
+            h1 += `</tr>`; h2 += `</tr>`;
+            thead.innerHTML = h1 + h2;
+
+            // 內容
+            let body = "";
+            let conflicts = [];
+
+            employees.forEach((emp, idx) => {
+                let used = countUsed(emp);
+                body += `<tr><td class="sticky-col col-name">${emp.name}</td><td class="sticky-col col-sch">${emp.school}</td>`;
+                
+                for(let d=1; d<=daysInMonth; d++) {
+                    let data = getCellData(emp, month, d);
+                    body += `<td class="${data.cls}" onclick="handleCell(${idx},${month},${d})" style="font-size:11px;">${data.txt}</td>`;
+                    
+                    // 簡單衝突偵測
+                    if(data.isLeave && !data.isSchoolHol && !data.isPH && !data.isWeekend) {
+                        conflicts.push(`${month}/${d} ${emp.school}`);
+                    }
+                }
+                body += `</tr>`;
+            });
+            tbody.innerHTML = body;
+            
+            // 顯示警告
+            if(conflicts.length > 0) {
+                // 簡化顯示，手機版只顯示數量
+                document.getElementById('alert-area').innerHTML = `⚠️ 注意：有 ${conflicts.length} 筆請假在「上課日」發生衝突！`;
+                document.getElementById('alert-area').style.display = 'block';
+            }
+
+        } else {
+            // === 年總覽 ===
+            let h1 = `<tr><th class="sticky-col col-name">姓名</th><th class="sticky-col col-sch">學校</th>`;
+            
+            // 生成 12 個月的表頭
+            for(let m=1; m<=12; m++) {
+                let days = new Date(currentYear, m, 0).getDate();
+                // 標記每個月第一天 ID 供跳轉用
+                h1 += `<th id="header-m${m}" colspan="${days}" class="month-divider" style="background:#eee; color:#333;">${m}月</th>`;
+            }
+            h1 += `</tr><tr><th class="sticky-col col-name" style="top:35px"></th><th class="sticky-col col-sch" style="top:35px"></th>`;
+            
+            // 生成日期行
+            for(let m=1; m<=12; m++) {
+                let days = new Date(currentYear, m, 0).getDate();
+                for(let d=1; d<=days; d++) {
+                    let border = (d===days)?'month-divider':'';
+                    h1 += `<th class="${border}" style="top:35px; min-width:20px;">${d}</th>`;
+                }
+            }
+            h1 += `</tr>`;
+            thead.innerHTML = h1;
+
+            let body = "";
+            employees.forEach((emp, idx) => {
+                let remaining = emp.total - countUsed(emp);
+                let color = remaining < 0 ? 'red' : 'green';
+                
+                body += `<tr><td class="sticky-col col-name">${emp.name} <span style="color:${color}; font-size:9px;">(${remaining})</span></td>
+                         <td class="sticky-col col-sch">${emp.school}</td>`;
+                
+                for(let m=1; m<=12; m++) {
+                    let days = new Date(currentYear, m, 0).getDate();
+                    for(let d=1; d<=days; d++) {
+                        let data = getCellData(emp, m, d);
+                        let border = (d===days)?'month-divider':'';
+                        body += `<td class="${data.cls} ${border}" onclick="handleCell(${idx},${m},${d})"></td>`;
+                    }
+                }
+                body += `</tr>`;
+            });
+            tbody.innerHTML = body;
+        }
+    }
+
+    function getCellData(emp, m, d) {
+        let date = new Date(currentYear, m-1, d);
+        let day = date.getDay();
+        let isWeekend = (day===0 || day===6);
+        let isLeave = emp.leaves[m] && emp.leaves[m].includes(d);
+        let schoolHol = schoolHolidays[emp.school] && schoolHolidays[emp.school][m] && schoolHolidays[emp.school][m][d];
+        let ph = publicHolidays[m] && publicHolidays[m][d];
+
+        let cls = isWeekend ? "weekend" : "";
+        let txt = "";
+
+        if(isLeave) { cls = "on-leave"; txt = "休"; }
+        else if(schoolHol) { cls = "school-holiday"; txt = schoolHol.substring(0,2); } // 手機版只取前兩字
+        else if(ph) { txt = ""; } // 公眾假字不顯示在格內以省空間
+
+        return { cls, txt, isLeave, isSchoolHol: !!schoolHol, isPH: !!ph, isWeekend };
+    }
+
+    function countUsed(emp) {
+        let c = 0;
+        for(let m in emp.leaves) c += emp.leaves[m].length;
+        return c;
+    }
+
+    function handleCell(idx, m, d) {
+        let mode = document.getElementById('modeSelect').value;
+        let emp = employees[idx];
+        
+        if(mode === 'leave') {
+            if(!emp.leaves[m]) emp.leaves[m] = [];
+            if(emp.leaves[m].includes(d)) emp.leaves[m] = emp.leaves[m].filter(x=>x!==d);
+            else emp.leaves[m].push(d);
+            saveData();
+        } else {
+            // 設定學校假期
+            let s = emp.school;
+            if(!schoolHolidays[s]) schoolHolidays[s] = {};
+            if(!schoolHolidays[s][m]) schoolHolidays[s][m] = {};
+            
+            if(schoolHolidays[s][m][d]) {
+                if(confirm('刪除假期?')) delete schoolHolidays[s][m][d];
+            } else {
+                let n = prompt('輸入假期名稱 (如:校慶)');
+                if(n) schoolHolidays[s][m][d] = n;
+            }
+            saveData();
+        }
+    }
+
+    // --- 其他 ---
+    function renderDashboard() {
+        document.getElementById('dash-total').innerText = employees.length;
+        let d = new Date();
+        let m=d.getMonth()+1, day=d.getDate();
+        let c = employees.filter(e=>e.leaves[m] && e.leaves[m].includes(day)).length;
+        document.getElementById('dash-leave').innerText = c;
+        let rem = employees.reduce((a,b)=>a+(b.total-countUsed(b)),0);
+        document.getElementById('dash-remain').innerText = (employees.length ? (rem/employees.length).toFixed(1) : 0);
+    }
+    
+    function renderEmployeeList() {
+        const b = document.getElementById('emp-list-body');
+        b.innerHTML = '';
+        employees.forEach((e,i)=>{
+            b.innerHTML += `<tr>
+                <td>${e.name}</td><td>${e.school}</td>
+                <td>${e.total - countUsed(e)}</td>
+                <td><button class="btn btn-danger" onclick="delEmp(${i})" style="padding:2px 5px; font-size:12px;">刪</button></td>
+            </tr>`;
+        });
+    }
+
+    function addEmployee() {
+        let n = document.getElementById('new-name').value;
+        let s = document.getElementById('new-school').value;
+        let t = parseInt(document.getElementById('new-total').value);
+        if(n && s) { employees.push({id:Date.now(), name:n, school:s, total:t, leaves:{}}); saveData(); }
+        document.getElementById('new-name').value = '';
+    }
+    function delEmp(i) { if(confirm('刪除?')) { employees.splice(i,1); saveData(); } }
+    function resetSystem() { if(confirm('重置所有資料?')) { localStorage.clear(); location.reload(); } }
+</script>
+</body>
+</html>
