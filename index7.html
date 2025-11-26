@@ -1,10 +1,11 @@
-<!DOCTYPE html>
-<html lang="zh-Hant">
-<head>
+<!DOCTYPE html><html lang="zh-Hant"><head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>腓利清潔 HR - V21 全適配版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -13,106 +14,40 @@
             --danger-color: #c0392b;
             --warning-color: #f39c12;
             --info-color: #3498db;
-            
-            /* 尺寸設定 */
-            --name-col-width: 85px;    
-            --school-col-width: 95px;  
-            --header-height: 40px;     
-            --cell-height: 35px;       
+            --name-col-width: 85px; 
+            --school-col-width: 95px; 
+            --header-height: 40px; 
+            --cell-height: 35px; 
             --cell-width-month: 45px;
             --cell-width-year: 22px;
         }
-        
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, "Microsoft JhengHei", sans-serif; }
-        
-        body { 
-            display: flex; 
-            background-color: var(--bg-color); 
-            /* 關鍵修正：使用 dvh (Dynamic Viewport Height) 適應 Chrome 網址列 */
-            height: 100vh; 
-            height: 100dvh; 
-            overflow: hidden; 
-            font-size: 14px; 
-            margin: 0; 
-        }
-
-        /* --- 1. 登入頁面 --- */
-        #login-page {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            z-index: 9999; display: flex; justify-content: center; align-items: center;
-            flex-direction: column;
-        }
-        .login-box {
-            background: white; padding: 30px; border-radius: 10px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 90%; max-width: 350px; text-align: center;
-        }
+        body { display: flex; background-color: var(--bg-color); height: 100vh; height: 100dvh; overflow: hidden; font-size: 14px; margin: 0; }
+        #login-page { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%); z-index: 9999; display: flex; justify-content: center; align-items: center; flex-direction: column; }
+        .login-box { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 10px 25px rgba(0,0,0,0.2); width: 90%; max-width: 350px; text-align: center; }
         .login-logo { font-size: 3rem; margin-bottom: 10px; }
         .login-title { font-size: 1.5rem; font-weight: bold; color: var(--primary-color); margin-bottom: 5px; }
         .login-subtitle { color: #7f8c8d; font-size: 0.9rem; margin-bottom: 20px; }
-        .login-input {
-            width: 100%; padding: 12px; margin-bottom: 15px;
-            border: 1px solid #ddd; border-radius: 6px; font-size: 16px;
-        }
-        .login-btn {
-            width: 100%; padding: 12px; background: var(--secondary-color);
-            color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s;
-        }
+        .login-input { width: 100%; padding: 12px; margin-bottom: 15px; border: 1px solid #ddd; border-radius: 6px; font-size: 16px; }
+        .login-btn { width: 100%; padding: 12px; background: var(--secondary-color); color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold; cursor: pointer; transition: 0.2s; }
         .login-btn:hover { opacity: 0.9; }
         #login-error { color: var(--danger-color); font-size: 0.9rem; margin-top: 10px; display: none; }
-
-        /* --- 2. 應用程式容器 --- */
         #app-container { display: flex; width: 100%; height: 100%; opacity: 0; transition: opacity 0.5s; pointer-events: none; }
         #app-container.visible { opacity: 1; pointer-events: auto; }
-
-        /* --- 3. 側邊欄 (手機適配重點區) --- */
-        .sidebar { 
-            width: 240px; background: var(--primary-color); color: white; display: flex; flex-direction: column; padding: 15px; flex-shrink: 0; z-index: 1000; box-shadow: 2px 0 5px rgba(0,0,0,0.1); 
-        }
+        .sidebar { width: 240px; background: var(--primary-color); color: white; display: flex; flex-direction: column; padding: 15px; flex-shrink: 0; z-index: 1000; box-shadow: 2px 0 5px rgba(0,0,0,0.1); }
         .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; position: relative; }
-
         @media (max-width: 768px) {
             body { flex-direction: column; }
             #app-container { flex-direction: column; }
-            
-            .sidebar { 
-                width: 100%; 
-                height: auto; 
-                flex-direction: row; 
-                /* 修正：增加頂部 Padding，防止被 Chrome 網址列或劉海遮擋 */
-                padding-top: calc(15px + env(safe-area-inset-top)); 
-                padding-bottom: 12px; 
-                padding-left: 15px; 
-                padding-right: 15px;
-                overflow-x: auto; 
-                white-space: nowrap; 
-                align-items: center; 
-                -webkit-overflow-scrolling: touch;
-                /* 確保選單在最上層 */
-                position: relative;
-                z-index: 2000;
-            }
-            
+            .sidebar { width: 100%; height: auto; flex-direction: row; padding-top: calc(15px + env(safe-area-inset-top)); padding-bottom: 12px; padding-left: 15px; padding-right: 15px; overflow-x: auto; white-space: nowrap; align-items: center; -webkit-overflow-scrolling: touch; position: relative; z-index: 2000; }
             .sidebar h2 { display: none; }
-            
-            /* 調整按鈕間距 */
-            .menu-item { 
-                margin: 0 8px 0 0; 
-                padding: 8px 14px; 
-                font-size: 13px; 
-                background: rgba(255,255,255,0.1); 
-                flex-shrink: 0; 
-            }
-            
+            .menu-item { margin: 0 8px 0 0; padding: 8px 14px; font-size: 13px; background: rgba(255,255,255,0.1); flex-shrink: 0; }
             :root { --name-col-width: 80px; --school-col-width: 85px; }
         }
-
         .menu-item { padding: 10px; cursor: pointer; border-radius: 6px; margin-bottom: 8px; transition: 0.2s; display: flex; align-items: center; gap: 10px; }
         .menu-item.active { background-color: var(--secondary-color); font-weight: bold; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         .section { display: none; height: 100%; flex-direction: column; padding: 10px; overflow-y: auto; }
         .section.active { display: flex; }
-
-        /* --- 4. 儀表板 & 報表區 --- */
         .dashboard-header { margin-bottom: 15px; padding: 5px; }
         .company-title { font-size: 1.4rem; color: var(--primary-color); font-weight: bold; margin-bottom: 5px; }
         .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-bottom: 15px; }
@@ -130,8 +65,6 @@
         .school-badge { font-weight: bold; color: #2c3e50; font-size: 0.9rem; }
         .count-badge { background: #e74c3c; color: white; padding: 2px 8px; border-radius: 10px; font-weight: bold; font-size: 0.8rem; }
         .holiday-tag { background: #d6eaf8; color: #2980b9; padding: 2px 6px; border-radius: 4px; font-size: 0.75rem; font-weight: bold; }
-
-        /* --- 5. 排班表 --- */
         .roster-controls { background: white; padding: 10px; border-bottom: 1px solid #ddd; display: flex; flex-direction: column; gap: 8px; border-radius: 8px 8px 0 0; }
         .control-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
         .table-wrapper { flex: 1; overflow: auto; background: white; position: relative; border-radius: 0 0 8px 8px; border: 1px solid #ddd; border-top: none; -webkit-overflow-scrolling: touch; }
@@ -146,8 +79,6 @@
         .month-view-th { min-width: var(--cell-width-month); font-size: 14px; }
         .month-view-td { font-size: 15px; font-weight: bold; cursor: pointer; }
         .yearly-view-td { min-width: var(--cell-width-year); border-right: 1px solid #eee; cursor: pointer; }
-        .month-block-even { background-color: #fafafa; }
-        .month-block-odd { background-color: #ffffff; }
         .cell-content { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
         .school-holiday { background-color: #d4edda; color: #155724; }
         .on-leave { background-color: #f8d7da; color: #c0392b; }
@@ -155,7 +86,6 @@
         .ph-cell { background-color: #fff3e0; color: #d35400; font-weight: bold; writing-mode: vertical-lr; font-size: 10px; padding: 2px 0; }
         .month-jumper { display: flex; overflow-x: auto; gap: 5px; padding-bottom: 5px; }
         .jump-btn { border: 1px solid #999; background: white; padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; white-space: nowrap; }
-
         .btn { padding: 6px 12px; background: var(--secondary-color); color: white; border: none; border-radius: 4px; cursor: pointer; font-size: 13px; }
         .btn-gray { background: #95a5a6; }
         .btn-danger { background: #c0392b; }
@@ -163,7 +93,6 @@
         select, input { padding: 6px; border: 1px solid #999; border-radius: 4px; font-size: 14px; }
         .progress-bar-bg { width: 100%; background: #eee; height: 6px; border-radius: 3px; overflow: hidden; margin-top: 5px; }
         .progress-bar-fill { height: 100%; background: var(--secondary-color); transition: width 0.3s; }
-
         @media print {
             .sidebar, .roster-controls, #login-page, #dashboard, #employees, #year-jumper, .month-jumper { display: none !important; }
             .main-content { margin: 0; padding: 0; overflow: visible; }
@@ -177,9 +106,7 @@
         }
         #print-area { display: none; padding: 20px; }
     </style>
-</head>
-<body>
-
+</head><body>
     <div id="login-page">
         <div class="login-box">
             <div class="login-logo">🧹</div>
@@ -191,22 +118,18 @@
             <div id="login-error">⚠️ 帳號或密碼錯誤</div>
         </div>
     </div>
-
     <div id="app-container">
         <div class="sidebar">
             <h2 style="margin-bottom:20px; font-size: 1.3rem; padding-left:5px;">腓利清潔 HR</h2>
             <div class="menu-item active" onclick="nav('dashboard')">📊 智能儀表板</div>
             <div class="menu-item" onclick="nav('roster')">🗓️ 學年排班</div>
             <div class="menu-item" onclick="nav('employees')">👥 員工管理</div>
-            
             <div style="border-top:1px solid rgba(255,255,255,0.2); margin:5px 0;"></div>
             <div class="menu-item" onclick="exportExcel()" style="background: #217346;">📊 匯出 Excel</div>
             <div class="menu-item" onclick="printReport()" style="background: #e67e22;">🖨️ 列印 / PDF</div>
-
             <div class="menu-item" onclick="logout()" style="margin-top:auto; background:#34495e; border:1px solid #999;">🔒 登出</div>
             <div class="menu-item" onclick="resetSys()" style="background:#c0392b;">⚠️ 重置</div>
         </div>
-
         <div class="main-content">
             <div id="dashboard" class="section active">
                 <div class="dashboard-header">
@@ -214,34 +137,15 @@
                     <div style="color:#666; font-size:0.9rem;">風險控管系統 (2025/11 - 2026/08)</div>
                 </div>
                 <div class="stats-grid">
-                    <div class="stat-card" style="border-left-color: #34495e;">
-                        <div class="stat-label">員工總數</div>
-                        <div class="stat-num" id="stat-total-emp">0</div>
-                    </div>
-                    <div class="stat-card" style="border-left-color: var(--secondary-color);">
-                        <div class="stat-label">總剩餘年假</div>
-                        <div class="asset-box">
-                            <div class="stat-num" id="stat-grand-rem" style="color:var(--secondary-color);">0</div>
-                            <div class="asset-total">/ <span id="stat-grand-total">0</span> 天</div>
-                        </div>
-                    </div>
-                    <div class="stat-card" style="border-left-color: #e74c3c;">
-                        <div class="stat-label">同校同日撞假 (次)</div>
-                        <div class="stat-num" id="stat-same-school-conflict" style="color:#e74c3c;">0</div>
-                    </div>
+                    <div class="stat-card" style="border-left-color: #34495e;"><div class="stat-label">員工總數</div><div class="stat-num" id="stat-total-emp">0</div></div>
+                    <div class="stat-card" style="border-left-color: var(--secondary-color);"><div class="stat-label">總剩餘年假</div><div class="asset-box"><div class="stat-num" id="stat-grand-rem" style="color:var(--secondary-color);">0</div><div class="asset-total">/ <span id="stat-grand-total">0</span> 天</div></div></div>
+                    <div class="stat-card" style="border-left-color: #e74c3c;"><div class="stat-label">同校同日撞假 (次)</div><div class="stat-num" id="stat-same-school-conflict" style="color:#e74c3c;">0</div></div>
                 </div>
                 <div class="alert-container">
-                    <div class="alert-box">
-                        <div class="alert-header" style="color: #e74c3c;">🚨 同校撞假警報 (≥2人)</div>
-                        <div class="alert-list" id="list-school-conflicts"></div>
-                    </div>
-                    <div class="alert-box">
-                        <div class="alert-header" style="color: var(--info-color);">🏖️ 未來 30 天公眾假期</div>
-                        <div class="alert-list" id="list-upcoming-ph"></div>
-                    </div>
+                    <div class="alert-box"><div class="alert-header" style="color: #e74c3c;">🚨 同校撞假警報 (≥2人)</div><div class="alert-list" id="list-school-conflicts"></div></div>
+                    <div class="alert-box"><div class="alert-header" style="color: var(--info-color);">🏖️ 未來 30 天公眾假期</div><div class="alert-list" id="list-upcoming-ph"></div></div>
                 </div>
             </div>
-
             <div id="roster" class="section">
                 <div class="roster-controls">
                     <div class="control-row" style="justify-content: space-between;">
@@ -258,11 +162,8 @@
                     </div>
                     <div id="year-jumper" class="month-jumper" style="display:none;"></div>
                 </div>
-                <div class="table-wrapper" id="tableContainer">
-                    <table id="rosterTable"><thead></thead><tbody></tbody></table>
-                </div>
+                <div class="table-wrapper" id="tableContainer"><table id="rosterTable"><thead></thead><tbody></tbody></table></div>
             </div>
-
             <div id="employees" class="section">
                 <h3 style="margin-bottom:10px;">員工年假資產庫</h3>
                 <div style="background:white; padding:10px; margin-bottom:10px; border-radius:8px; display:flex; gap:10px; flex-wrap:wrap;">
@@ -272,28 +173,79 @@
                 </div>
                 <div style="overflow:auto; background:white; border-radius:8px;">
                     <table style="width:100%; border-collapse:collapse;">
-                        <thead style="background:#eee;">
-                            <tr><th style="padding:10px; text-align:left;">姓名</th><th>學校</th><th>總額</th><th>已用</th><th>剩餘</th><th style="width:80px;">使用率</th><th>操作</th></tr>
-                        </thead>
+                        <thead style="background:#eee;"><tr><th style="padding:10px; text-align:left;">姓名</th><th>學校</th><th>總額</th><th>已用</th><th>剩餘</th><th style="width:80px;">使用率</th><th>操作</th></tr></thead>
                         <tbody id="emp-body"></tbody>
                     </table>
                 </div>
             </div>
-
             <div id="print-area">
                 <h2 style="text-align:center;">腓利清潔 - 員工年假報表</h2>
                 <p style="text-align:center;">學年: 2025/11 - 2026/08</p>
-                <table id="print-table">
-                    <thead><tr><th>姓名</th><th>學校</th><th>年假總額</th><th>已用</th><th>剩餘</th></tr></thead>
-                    <tbody id="print-body"></tbody>
-                </table>
+                <table id="print-table"><thead><tr><th>姓名</th><th>學校</th><th>年假總額</th><th>已用</th><th>剩餘</th></tr></thead><tbody id="print-body"></tbody></table>
             </div>
         </div>
     </div>
-
 <script>
-    const CREDENTIALS = { user: "philip", pass: "60986314" };
+    // Firebase 設定
+    const firebaseConfig = {
+        apiKey: "AIzaSyDuVyo0MVpQ8XJMYplRQcj2kJ4_bdrVhGs",
+        authDomain: "hr-system-58d4d.firebaseapp.com",
+        projectId: "hr-system-58d4d",
+        storageBucket: "hr-system-58d4d.firebasestorage.app",
+        messagingSenderId: "841414140594",
+        appId: "1:841414140594:web:07059f6863379d18a55fab",
+        measurementId: "G-7LMGHJNY0H"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
+    // Firestore 數據操作函數
+    let employees = [];
+    let schoolHols = {};
+
+    async function loadDataFromFirestore() {
+        try {
+            const empDoc = await db.collection('hrData').doc('employees').get();
+            if (empDoc.exists) {
+                employees = empDoc.data().list || [];
+            } else {
+                employees = [
+                    {id:1, name:"陳大文", school:"聖保羅", total:14, leaves:{}},
+                    {id:2, name:"李阿姨", school:"聖保羅", total:7, leaves:{}},
+                    {id:3, name:"張三", school:"聖保羅", total:7, leaves:{}}
+                ];
+            }
+            const holsDoc = await db.collection('hrData').doc('schoolHolidays').get();
+            if (holsDoc.exists) {
+                schoolHols = holsDoc.data().holidays || {};
+            }
+        } catch (error) {
+            console.error('加載Firestore數據失敗:', error);
+            employees = [
+                {id:1, name:"陳大文", school:"聖保羅", total:14, leaves:{}},
+                {id:2, name:"李阿姨", school:"聖保羅", total:7, leaves:{}},
+                {id:3, name:"張三", school:"聖保羅", total:7, leaves:{}}
+            ];
+        }
+    }
+
+    async function saveDataToFirestore() {
+        try {
+            await db.collection('hrData').doc('employees').set({
+                list: employees,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            await db.collection('hrData').doc('schoolHolidays').set({
+                holidays: schoolHols,
+                updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+            console.log('數據已保存到Firestore');
+        } catch (error) {
+            console.error('保存Firestore數據失敗:', error);
+        }
+    }
+
+    const CREDENTIALS = { user: "philip", pass: "60986314" };
     function checkSession() { if(sessionStorage.getItem("philip_login") === "true") showApp(); }
     function login() {
         const u = document.getElementById('login-user').value;
@@ -325,23 +277,11 @@
         "2026-2": {17:"初一", 18:"初二", 19:"初三"}, "2026-4": {3:"受難", 4:"清明", 6:"復活"},
         "2026-5": {1:"勞動", 25:"佛誕"}, "2026-6": {19:"端午"}, "2026-7": {1:"回歸"}
     };
-
-    let employees = JSON.parse(localStorage.getItem(DB_KEY)) || [
-        {id:1, name:"陳大文", school:"聖保羅", total:14, leaves:{}},
-        {id:2, name:"李阿姨", school:"聖保羅", total:7, leaves:{}},
-        {id:3, name:"張三", school:"聖保羅", total:7, leaves:{}} 
-    ];
-    let schoolHols = JSON.parse(localStorage.getItem(DB_KEY+'_sch')) || {};
     let currentView = 'month';
-
     window.onload = () => { checkSession(); };
-
-    function initApp() { initMonthSelect(); initYearJumper(); renderAll(); }
-    function save() {
-        localStorage.setItem(DB_KEY, JSON.stringify(employees));
-        localStorage.setItem(DB_KEY+'_sch', JSON.stringify(schoolHols));
-        renderAll();
-    }
+    
+    async function initApp() { await loadDataFromFirestore(); initMonthSelect(); initYearJumper(); renderAll(); }
+    function save() { saveDataToFirestore(); renderAll(); }
     function renderAll() { renderDashboard(); renderTable(); renderEmpList(); }
     function nav(id) {
         document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
@@ -351,8 +291,6 @@
         if(map[id]!==undefined) document.querySelectorAll('.menu-item')[map[id]].classList.add('active');
         if(id === 'roster') setTimeout(renderTable, 50);
     }
-
-    // Export Excel
     function exportExcel() {
         let data = [];
         employees.forEach(e => {
@@ -370,8 +308,6 @@
         XLSX.utils.book_append_sheet(wb, ws, "請假明細");
         XLSX.writeFile(wb, "腓利清潔_年假表.xlsx");
     }
-
-    // Print
     function printReport() {
         const tbody = document.getElementById('print-body');
         tbody.innerHTML = '';
@@ -381,7 +317,6 @@
         });
         window.print();
     }
-
     function renderDashboard() {
         document.getElementById('stat-total-emp').innerText = employees.length;
         let grandTotal = 0, grandUsed = 0;
@@ -391,7 +326,6 @@
         });
         document.getElementById('stat-grand-total').innerText = grandTotal;
         document.getElementById('stat-grand-rem').innerText = grandTotal - grandUsed;
-
         const listConflict = document.getElementById('list-school-conflicts');
         listConflict.innerHTML = '';
         let conflictMap = {}; 
@@ -407,22 +341,20 @@
                         let mHols = sHols[mk] || {};
                         let isSchHol = mHols[d];
                         if(!isPH && !isWeekend && !isSchHol) {
-                             let key = `${mObj.m}/${d}|${e.school}`;
-                             if(!conflictMap[key]) conflictMap[key] = 0;
-                             conflictMap[key]++;
+                            let key = `${mObj.m}/${d}|${e.school}`;
+                            if(!conflictMap[key]) conflictMap[key] = 0;
+                            conflictMap[key]++;
                         }
                     });
                 }
             });
         });
-
         let totalSevere = 0;
         let sortedKeys = Object.keys(conflictMap).sort((a,b) => {
             let da = parseFloat(a.split('|')[0].replace('/','.'));
             let db = parseFloat(b.split('|')[0].replace('/','.'));
             return da - db;
         });
-
         sortedKeys.forEach(key => {
             let count = conflictMap[key];
             if(count >= 2) { 
@@ -433,7 +365,6 @@
         });
         document.getElementById('stat-same-school-conflict').innerText = totalSevere;
         if(totalSevere === 0) listConflict.innerHTML = '<div style="padding:20px; text-align:center; color:#999;">無同校撞假風險。</div>';
-
         const listPH = document.getElementById('list-upcoming-ph');
         listPH.innerHTML = '';
         let today = new Date();
@@ -449,17 +380,14 @@
         }
         if(!foundPH) listPH.innerHTML = '<div style="padding:20px; text-align:center; color:#999;">未來 30 天無公眾假。</div>';
     }
-
     function renderTable() {
         const thead = document.querySelector('#rosterTable thead');
         const tbody = document.querySelector('#rosterTable tbody');
-        
         if(currentView === 'month') {
             const tmIdx = document.getElementById('monthSelect').value;
             const tm = targetMonths[tmIdx];
             const daysInMonth = new Date(tm.y, tm.m, 0).getDate();
             const holKey = `${tm.y}-${tm.m}`;
-
             let h1 = `<tr><th class="col-name" rowspan="2">姓名</th><th class="col-sch" rowspan="2">學校</th>`;
             let h2 = `<tr>`;
             for(let d=1; d<=daysInMonth; d++) {
@@ -472,7 +400,6 @@
             }
             h1 += `</tr>`; h2 += `</tr>`;
             thead.innerHTML = h1 + h2;
-
             let body = "";
             employees.forEach((emp, idx) => {
                 body += `<tr><td class="col-name">${emp.name}</td><td class="col-sch">${emp.school}</td>`;
@@ -483,7 +410,6 @@
                 body += `</tr>`;
             });
             tbody.innerHTML = body;
-
         } else {
             let h1 = `<tr><th class="col-name">姓名</th><th class="col-sch">學校</th>`;
             targetMonths.forEach((tm, i) => {
@@ -492,7 +418,6 @@
                 h1 += `<th id="head-m-${tm.y}-${tm.m}" colspan="${days}" style="background:${bg}; border-right: 1px solid #ccc; font-size:10px; padding:2px;">${tm.y}/${tm.m}</th>`;
             });
             h1 += `</tr><tr><th class="col-name" style="top:var(--header-height)"></th><th class="col-sch" style="top:var(--header-height)"></th>`;
-            
             targetMonths.forEach((tm, i) => {
                 let days = new Date(tm.y, tm.m, 0).getDate();
                 let bg = (i % 2 === 0) ? '#fff' : '#f0f0f0';
@@ -503,7 +428,6 @@
             });
             h1 += `</tr>`;
             thead.innerHTML = h1;
-
             let body = "";
             employees.forEach((emp, idx) => {
                 let rem = emp.total - calcUsed(emp);
@@ -523,7 +447,6 @@
             tbody.innerHTML = body;
         }
     }
-
     function getCell(emp, y, m, d) {
         let date = new Date(y, m-1, d);
         let day = date.getDay();
@@ -600,7 +523,6 @@
     }
     function addEmp() { let n=document.getElementById('new-name').value, s=document.getElementById('new-sch').value; if(n&&s) { employees.push({id:Date.now(), name:n, school:s, total:12, leaves:{}}); save(); document.getElementById('new-name').value=''; } }
     function delEmp(i) { if(confirm('刪除?')) { employees.splice(i,1); save(); } }
-    function resetSys() { if(confirm('重置?')) { localStorage.removeItem(DB_KEY); localStorage.removeItem(DB_KEY+'_sch'); location.reload(); } }
+    async function resetSys() { if(confirm("重置系統？")) { try { await db.collection('hrData').doc('employees').delete(); await db.collection('hrData').doc('schoolHolidays').delete(); location.reload(); } catch(err) { console.error('重置系統失敗:', err); alert('重置失敗'); } } }
 </script>
-</body>
-</html>
+</body></html>
