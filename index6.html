@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>腓利清潔 HR - V20 數據輸出版</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+        <!-- Firebase SDK -->
+        <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+        <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
     <style>
         :root {
             --primary-color: #2c3e50;
@@ -270,6 +273,42 @@
     const CREDENTIALS = { user: "philip", pass: "60986314" };
 
     function checkSession() {
+
+            // Firebase 配置
+            const firebaseConfig = {
+                        apiKey: "AIzaSyDQ8SQpNv5jH8lN-xPo_KG5JZ7YlUxFMeM",
+                        authDomain: "hr-f0986.firebaseapp.com",
+                        projectId: "hr-f0986",
+                        storageBucket: "hr-f0986.firebasestorage.app",
+                        messagingSenderId: "600986314",
+                        appId: "1:600986314:web:f4c3d2af1b1a2b3c4d5e6f"
+                                };
+
+            // 初始化 Firebase
+            firebase.initializeApp(firebaseConfig);
+            const db = firebase.firestore();
+
+            // Firestore 数据加载和保存函数
+            async function loadDataFromFirestore() {
+                        try {
+                                        const employeesDoc = await db.collection('hrData').doc('employees').get();
+                                        const holidaysDoc = await db.collection('hrData').doc('schoolHolidays').get();
+
+                                        if (employeesDoc.exists) { employees = employeesDoc.data().list || []; }
+                                        if (holidaysDoc.exists) { schoolHols = holidaysDoc.data().holidays || {}; }
+                                    } catch (error) {
+                                        console.error('加载数据失败:', error);
+                                    }
+                    }
+
+            async function saveDataToFirestore() {
+                        try {
+                                        await db.collection('hrData').doc('employees').set({ list: employees, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                                        await db.collection('hrData').doc('schoolHolidays').set({ holidays: schoolHols, updatedAt: firebase.firestore.FieldValue.serverTimestamp() });
+                                    } catch (error) {
+                                        console.error('保存数据失败:', error);
+                                    }
+                    }
         if(sessionStorage.getItem("philip_login") === "true") showApp();
     }
     function login() {
