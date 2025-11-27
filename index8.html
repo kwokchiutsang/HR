@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>清潔先鋒 V7 - 智能排班系統</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Noto Sans TC', sans-serif;
+            background-color: #f1f5f9; /* Slate-100ish background */
+        }
+        /* 自定義滾動條樣式 (可選) */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <nav class="bg-slate-800 text-white shadow-md flex-shrink-0">
+        <div class="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center gap-3">
+                    <div class="bg-indigo-500 w-8 h-8 rounded flex items-center justify-center">
+                        <i class="fa-solid fa-broom text-white text-sm"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-lg font-bold leading-none">清潔先鋒 V7</h1>
+                        <span class="text-xs text-gray-400">智能排班系統</span>
+                    </div>
+                </div>
+                <div>
+                    <button class="bg-slate-700 hover:bg-slate-600 text-gray-200 px-4 py-2 rounded-lg text-sm transition flex items-center gap-2">
+                        <i class="fa-solid fa-database"></i> 資料庫
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <main class="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
+        <div class="max-w-screen-2xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+            <div class="lg:col-span-4 flex flex-col gap-4">
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex items-center gap-2 mb-6">
+                        <div class="bg-indigo-100 text-indigo-600 w-8 h-8 rounded-full flex items-center justify-center">
+                            <i class="fa-solid fa-plus"></i>
+                        </div>
+                        <h2 class="text-xl font-bold text-gray-800">新增工作安排</h2>
+                    </div>
+
+                    <form class="space-y-4">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-600 mb-1">
+                                <i class="fa-regular fa-calendar text-blue-400 mr-1"></i> 工作日期
+                            </label>
+                            <div class="relative">
+                                <input type="text" value="27/11/2025" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-lg font-semibold rounded-lg focus:ring-indigo-500 focus:border-indigo-500 block p-3 pr-10" readonly>
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
+                                    <i class="fa-regular fa-calendar"></i>
+                                </div>
+                                <div class="text-right mt-1">
+                                    <span class="text-xs text-indigo-600 font-medium">2025年11月27日 (週四)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-sm font-medium text-gray-600">
+                                    <i class="fa-solid fa-user-group text-purple-400 mr-1"></i> 員工 (可多選)
+                                </label>
+                                <a href="#" class="text-xs text-indigo-600 hover:underline">+ 管理</a>
+                            </div>
+                            <input type="text" placeholder="輸入姓名..." class="w-full bg-white border border-gray-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-sm font-medium text-gray-600">
+                                    <i class="fa-solid fa-location-dot text-red-400 mr-1"></i> 地點 / 學校
+                                </label>
+                                <a href="#" class="text-xs text-indigo-600 hover:underline">+ 管理</a>
+                            </div>
+                            <select class="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                                <option>請輸入或選擇地點</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-sm font-medium text-gray-600">
+                                    <i class="fa-regular fa-clock text-gray-500 mr-1"></i> 時間
+                                </label>
+                                <a href="#" class="text-xs text-indigo-600 hover:underline">+ 管理</a>
+                            </div>
+                            <input type="text" value="13:00 - 17:00" class="w-full bg-white border border-gray-200 rounded-lg p-2.5 text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-sm font-medium text-gray-600">
+                                    <i class="fa-solid fa-broom text-orange-400 mr-1"></i> 工作內容
+                                </label>
+                                <a href="#" class="text-xs text-indigo-600 hover:underline">+ 管理</a>
+                            </div>
+                            <input type="text" placeholder="工作內容簡述" class="w-full bg-white border border-gray-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-200">
+                        </div>
+
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="text-sm font-medium text-gray-600">
+                                    <i class="fa-regular fa-note-sticky text-yellow-500 mr-1"></i> 備註 (選填)
+                                </label>
+                                <a href="#" class="text-xs text-indigo-600 hover:underline">+ 管理</a>
+                            </div>
+                            <textarea rows="3" placeholder="其他注意事項..." class="w-full bg-white border border-gray-200 rounded-lg p-2.5 focus:outline-none focus:ring-2 focus:ring-indigo-200 resize-none"></textarea>
+                        </div>
+
+                        <div class="flex flex-wrap gap-2 text-xs text-gray-600">
+                            <button type="button" class="bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded transition">+ 帶備鎖匙</button>
+                            <button type="button" class="bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded transition">+ 注意地滑</button>
+                            <button type="button" class="bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded transition">+ 需要打卡</button>
+                            <button type="button" class="bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded transition">+ 穿著整齊制服</button>
+                            <button type="button" class="bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded transition">+ 自備午膳</button>
+                        </div>
+
+                        <button type="button" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-3 rounded-lg mt-4 flex items-center justify-center gap-2 transition">
+                            <i class="fa-solid fa-circle-plus"></i> 加入排程
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <div class="lg:col-span-8 flex flex-col gap-4">
+                
+                <div class="bg-white rounded-xl shadow-sm p-4 flex flex-col sm:flex-row justify-between items-center gap-4">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-indigo-100 text-indigo-600 w-10 h-10 rounded-lg flex items-center justify-center text-xl">
+                            <i class="fa-regular fa-calendar-check"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-800">當日排班表</h2>
+                            <p class="text-xs text-gray-500">共 <span class="text-indigo-600 font-bold">1</span> 項工作</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <button class="bg-amber-100 text-amber-700 hover:bg-amber-200 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition">
+                            <i class="fa-regular fa-copy"></i> 複製排班
+                        </button>
+                        <button class="bg-gray-100 text-gray-500 hover:bg-gray-200 px-3 py-2 rounded-lg text-sm transition">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                        <button class="bg-indigo-600 text-white hover:bg-indigo-700 px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2 transition shadow-sm">
+                            <i class="fa-solid fa-image"></i> 匯出圖片
+                        </button>
+                    </div>
+                </div>
+
+                <div class="space-y-4">
+                    
+                    <div class="bg-white rounded-xl shadow-sm border-l-4 border-indigo-600 p-5 flex flex-col md:flex-row justify-between gap-4">
+                        
+                        <div class="flex-1">
+                            <div class="flex items-center justify-between mb-3">
+                                <h3 class="text-xl font-bold text-gray-800">香港大學</h3>
+                                <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded text-sm font-medium flex items-center gap-2 md:hidden">
+                                    <i class="fa-regular fa-clock"></i> 13:00 - 17:00
+                                </span>
+                            </div>
+
+                            <div class="space-y-3">
+                                <div class="flex items-center gap-2">
+                                    <i class="fa-solid fa-user text-indigo-500 w-5 text-center"></i>
+                                    <span class="text-indigo-600 font-medium">陳大文</span>
+                                </div>
+                                
+                                <div class="flex flex-wrap items-center gap-3">
+                                    <div class="flex items-center gap-2 text-gray-700">
+                                        <i class="fa-solid fa-broom text-gray-400 w-5 text-center"></i>
+                                        <span>課室清潔</span>
+                                    </div>
+                                    <span class="bg-orange-50 text-orange-600 text-xs px-2 py-1 rounded border border-orange-100 flex items-center gap-1">
+                                        <i class="fa-solid fa-triangle-exclamation"></i> 帶備鎖匙
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col items-end justify-between gap-4">
+                             <span class="hidden md:flex bg-gray-100 text-gray-600 px-3 py-1 rounded text-sm font-medium items-center gap-2">
+                                <i class="fa-regular fa-clock"></i> 13:00 - 17:00
+                            </span>
+
+                            <div class="flex items-center gap-2 mt-auto">
+                                <button class="bg-gray-50 hover:bg-gray-100 text-gray-500 px-3 py-1.5 rounded border border-gray-200 text-sm transition flex items-center gap-1">
+                                    <i class="fa-solid fa-pen"></i> 修改
+                                </button>
+                                <button class="bg-gray-50 hover:bg-red-50 text-gray-500 hover:text-red-500 px-3 py-1.5 rounded border border-gray-200 text-sm transition flex items-center gap-1">
+                                    <i class="fa-solid fa-trash-can"></i> 刪除
+                                </button>
+                            </div>
+                        </div>
+
+                    </div>
+                    </div>
+            </div>
+
+        </div>
+    </main>
+
+</body>
+</html>
