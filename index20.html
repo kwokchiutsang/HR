@@ -1,0 +1,1402 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>腓利清潔服務有限公司 - 管理系統 (V72.0 每日支出明細版)</title>
+    
+    <!-- CSS Libraries -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <!-- JS Libraries -->
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.0/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <style>
+        /* --- Root Variables & Base --- */
+        :root {
+            --color-base: #addbde;   
+            --color-main: #0081b2;   
+            --color-accent: #fed400; 
+            --color-sub: #1f4493;    
+            --color-bg: #f4f8f9;
+        }
+
+        body { 
+            background-color: var(--color-bg); 
+            font-family: "Microsoft JhengHei", sans-serif; 
+            color: #333; 
+        }
+        
+        /* --- Custom Modal (General & Copy) --- */
+        .custom-modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.5); z-index: 10000;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .custom-modal-box {
+            background: white; border-radius: 12px; width: 90%; max-width: 400px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); overflow: hidden;
+            animation: fadeIn 0.2s ease-out;
+        }
+        .custom-modal-header {
+            padding: 15px 20px; background-color: var(--color-sub); color: white;
+            font-weight: bold; font-size: 1.1rem;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .custom-modal-body {
+            padding: 25px 20px; font-size: 1rem; color: #333; line-height: 1.5;
+            text-align: center;
+        }
+        .custom-modal-footer {
+            padding: 15px 20px; background-color: #f8f9fa;
+            display: flex; justify-content: flex-end; gap: 10px;
+        }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- Login Screen --- */
+        .login-overlay { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: linear-gradient(135deg, var(--color-sub) 0%, var(--color-main) 100%); 
+            z-index: 9999; display: flex; align-items: center; justify-content: center; 
+        }
+        .login-box { 
+            background: white; padding: 40px; border-radius: 15px; 
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3); width: 90%; max-width: 380px; 
+            text-align: center; border-top: 5px solid var(--color-accent); 
+        }
+        
+        /* --- Navigation --- */
+        .sidebar { 
+            min-height: 100vh; background-color: var(--color-sub); color: white; transition: 0.3s; 
+        }
+        .nav-link { 
+            color: rgba(255,255,255,.8); padding: 12px 20px; cursor: pointer; 
+            display: flex; align-items: center; gap: 10px; border-right: 4px solid transparent; 
+        }
+        .nav-link:hover { color: white; background-color: rgba(255,255,255,0.1); }
+        .nav-link.active { 
+            color: white; background-color: var(--color-main); 
+            border-right: 4px solid var(--color-accent); font-weight: bold; 
+        }
+        .mobile-navbar { 
+            background-color: var(--color-sub); padding: 10px 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); 
+        }
+        .navbar-brand { color: white !important; font-weight: bold; font-size: 1.2rem; }
+        .main-content { padding: 20px; height: 100vh; overflow-y: auto; }
+        
+        @media (max-width: 768px) { 
+            .main-content { padding-top: 80px !important; height: auto; overflow-y: visible; padding: 15px; } 
+            .sidebar { display: none; } 
+            .custom-card { margin-bottom: 15px; padding: 15px; } 
+            .btn { width: 100%; margin-bottom: 5px; } 
+            .leave-table-container { max-height: 60vh; overflow-x: auto; } 
+        }
+
+        /* --- UI Elements --- */
+        .custom-card { 
+            background: white; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+            padding: 24px; margin-bottom: 20px; border: 1px solid #eaedf0; 
+            border-top: 3px solid var(--color-base); 
+        }
+        .btn-navy { 
+            background-color: var(--color-sub); color: white; border-radius: 8px; 
+            padding: 10px; font-weight: 600; border: none; 
+        }
+        .btn-navy:hover { background-color: #16326d; color: white; }
+        .badge-preset { 
+            font-size: 0.9rem; padding: 8px 12px; border-radius: 6px; 
+            display: inline-flex; align-items: center; gap: 8px; cursor: pointer; 
+            transition: all 0.2s; background-color: var(--color-base); color: #005f6b; border: 1px solid #8ec8cc; 
+        }
+        .badge-preset:hover { transform: translateY(-1px); box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+        .badge-remove-btn { 
+            cursor: pointer; opacity: 0.6; transition: 0.2s; font-size: 1.2rem; margin-left: 5px; 
+        }
+        .badge-remove-btn:hover { opacity: 1; color: #dc3545; font-weight: bold; transform: scale(1.2); }
+
+        .time-btn { 
+            font-size: 0.8rem; padding: 4px 8px; border: 1px solid #dee2e6; 
+            background: #fff; border-radius: 4px; cursor: pointer; color: #555; 
+            margin-right: 5px; margin-bottom: 5px; 
+        }
+        
+        /* --- Notice Board --- */
+        .notice-board { 
+            background-color: white; border: 2px solid #e0e0e0; border-radius: 10px; 
+            padding: 20px; margin-bottom: 20px; 
+        }
+        .notice-title { 
+            font-weight: bold; color: #555; margin-bottom: 15px; 
+            font-size: 1.1rem; border-bottom: 1px solid #eee; padding-bottom: 10px; 
+        }
+        .notice-item { 
+            padding: 5px 0; margin-bottom: 5px; font-size: 0.95rem; 
+            display: flex; align-items: flex-start; gap: 10px; 
+        }
+        .notice-dot { 
+            width: 12px; height: 12px; border-radius: 50%; display: inline-block; 
+            margin-top: 6px; flex-shrink: 0; 
+        }
+        .dot-red { background-color: #dc3545; }
+        .dot-blue { background-color: #0dcaf0; }
+        
+        /* --- Calendar --- */
+        .calendar-container { 
+            background: white; border-radius: 12px; overflow: hidden; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06); border: 1px solid #e0e0e0; 
+        }
+        .calendar-header-row { 
+            display: grid; grid-template-columns: repeat(7, 1fr); 
+            background-color: var(--color-base); border-bottom: 1px solid #dee2e6; color: #004d40; 
+        }
+        .cal-head-cell { padding: 12px; text-align: center; font-weight: bold; font-size: 0.9rem; }
+        .calendar-body { 
+            display: grid; grid-template-columns: repeat(7, 1fr); 
+            background-color: #dee2e6; gap: 1px; 
+        }
+        .cal-cell { 
+            min-height: 100px; background: #fff; padding: 4px; 
+            position: relative; transition: background 0.2s; cursor: pointer; 
+        }
+        .cal-cell:hover { background-color: #f0fbff; }
+        .cal-cell.is-weekend { background-color: #fafafa; }
+        .cal-cell.is-today { background-color: #fff9c4; }
+        .cal-date-num { 
+            font-weight: bold; font-size: 1.1rem; color: var(--color-sub); 
+            display: inline-block; width: 30px; height: 30px; 
+            text-align: center; line-height: 30px; border-radius: 50%; 
+        }
+        .cal-cell.is-today .cal-date-num { background-color: var(--color-main); color: white; }
+        .cal-events-wrapper { margin-top: 5px; display: flex; flex-direction: column; gap: 4px; }
+        .cal-pill { 
+            font-size: 0.75rem; padding: 2px 8px; border-radius: 12px; 
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+            display: block; font-weight: 500; cursor: help; 
+        }
+        .pill-holiday { background-color: #fff3cd; color: #856404; border: 1px solid #ffecb5; }
+        .pill-memo { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+        .pill-leave { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+
+        /* --- Sticky Tables (Leave Roster) --- */
+        .leave-table-container { 
+            overflow-x: auto; background: white; border-radius: 8px; 
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05); max-height: 75vh; 
+            position: relative; -webkit-overflow-scrolling: touch; 
+        }
+        .leave-table { width: 100%; border-collapse: separate; border-spacing: 0; min-width: 1400px; table-layout: fixed; }
+        .leave-table th, .leave-table td { 
+            border: 1px solid #dee2e6; text-align: center; padding: 4px 2px; 
+            font-size: 0.75rem; background: #fff; 
+        }
+        .leave-table .sticky-col { position: sticky; z-index: 3; }
+        .leave-table .col-school { left: 0; min-width: 150px; width: 150px; border-right: 2px solid #b0bec5; white-space: nowrap; }
+        .leave-table .col-name { left: 150px; min-width: 100px; width: 100px; border-right: 2px solid #b0bec5; white-space: nowrap; }
+        .leave-table thead th { 
+            background-color: var(--color-base); height: 40px; vertical-align: middle; 
+            position: sticky; top: 0; z-index: 4; color: #004d40; font-weight: bold; 
+        }
+        .leave-table thead th.sticky-col { z-index: 5; background-color: var(--color-base); }
+        .leave-table tbody td.col-school { background-color: var(--color-bg); color: #333; font-weight: bold; }
+        .leave-table tbody td.col-name { background-color: var(--color-sub); color: white; font-weight: bold; }
+        .school-group-border td { border-top: 3px solid var(--color-main) !important; }
+        
+        .leave-block { 
+            display: block; width: 100%; height: 100%; min-height: 30px; 
+            line-height: 30px; font-size: 0.7rem; cursor: help; 
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+            padding: 0 1px; position: relative; 
+        }
+        .leave-block:hover::after { 
+            content: "刪除"; position: absolute; top: -20px; left: 50%; 
+            transform: translateX(-50%); background: #dc3545; color: white; 
+            padding: 2px 5px; font-size: 0.6rem; border-radius: 3px; 
+            pointer-events: none; white-space: nowrap; z-index: 10; 
+        }
+        .leave-annual { background-color: var(--color-accent); color: #333; font-weight: bold; } 
+        .leave-other { background-color: #dc3545; color: white; } 
+        .leave-school-hol { 
+            background-color: #f3e5f5; color: #4a148c; border: 2px dashed #ab47bc; font-weight: bold; 
+        }
+
+        /* --- Context Menu --- */
+        .context-menu { 
+            position: fixed; background: white; border: 1px solid #ccc; 
+            box-shadow: 2px 2px 10px rgba(0,0,0,0.15); z-index: 9999; 
+            border-radius: 4px; padding: 5px 0; min-width: 140px; 
+        }
+        .context-menu-item { padding: 8px 15px; cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; gap: 8px; }
+        .context-menu-item:hover { background-color: #f0f0f0; }
+
+        /* --- Roster Cards --- */
+        .roster-card-item { 
+            border: 1px solid #e0e0e0; border-left: 5px solid var(--color-main); 
+            border-radius: 8px; background-color: white; transition: all 0.2s; 
+        }
+        .roster-card-item:hover { box-shadow: 0 5px 15px rgba(0,0,0,0.08); transform: translateY(-2px); }
+        .edit-mode-card { border-left-color: #ff9800; background-color: #fffdf5; }
+        .custom-multiselect { position: relative; }
+
+        /* --- Risk Control --- */
+        .kpi-card-new { 
+            background: #fff; border-radius: 8px; padding: 20px; 
+            border-left: 5px solid #ccc; box-shadow: 0 2px 10px rgba(0,0,0,0.05); 
+            height: 100%; display: flex; flex-direction: column; justify-content: space-between; 
+        }
+        .kpi-black { border-left-color: var(--color-sub); } 
+        .kpi-green { border-left-color: #2e7d32; } 
+        .kpi-red { border-left-color: #c62828; }
+        .kpi-label { font-size: 0.9rem; color: #546e7a; font-weight: 600; text-transform: uppercase; }
+        .kpi-number { font-size: 2.5rem; font-weight: 700; color: #263238; }
+        .risk-alert-section { 
+            background: white; border-radius: 12px; padding: 25px; 
+            box-shadow: 0 4px 20px rgba(0,0,0,0.06); height: 100%; border: 1px solid #e0e0e0; 
+        }
+        .risk-row-alert { 
+            display: flex; justify-content: space-between; align-items: center; 
+            padding: 15px; background-color: #ffebee; border-left: 4px solid #ef5350; 
+            border-radius: 6px; margin-bottom: 10px; 
+        }
+        .risk-school-name { color: var(--color-sub); font-weight: 800; font-size: 1.1rem; }
+        
+        /* --- Analysis --- */
+        .analysis-card { 
+            border-radius: 10px; padding: 20px; border: 1px solid #eee; height: 100%; 
+            position: relative; display: flex; flex-direction: column; justify-content: space-between; 
+        }
+        .an-purple { background: #f3e5f5; border-left: 5px solid #9c27b0; color: #4a148c; }
+        .an-green { background: #e8f5e9; border-left: 5px solid #2e7d32; color: #1b5e20; }
+        .an-orange { background: #fff3e0; border-left: 5px solid #ef6c00; color: #e65100; }
+        .an-blue { background: #e3f2fd; border-left: 5px solid #1565c0; color: #0d47a1; }
+        .an-value { font-size: 2rem; font-weight: bold; }
+        
+        /* Chart V72 Enhanced */
+        .chart-scroll-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        .chart-container { min-width: 1200px; padding: 30px 0 10px 0; }
+        .chart-row { 
+            display: flex; align-items: flex-end; justify-content: space-between; 
+            height: 250px; border-bottom: 1px solid #ccc; padding-bottom: 5px; 
+        }
+        .chart-col { 
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; 
+            height: 100%; position: relative; margin: 0 2px;
+        }
+        .chart-bar-bg {
+            width: 70%; background-color: #f0f0f0; border-radius: 4px 4px 0 0;
+            display: flex; align-items: flex-end; height: 100%;
+        }
+        .chart-bar-fill {
+            width: 100%; background-color: #5c6bc0; border-radius: 4px 4px 0 0;
+            transition: height 0.5s ease; position: relative; min-height: 1px;
+        }
+        .chart-bar-fill:hover { background-color: #3949ab; }
+        .chart-val-top {
+            font-size: 0.75rem; color: #1f4493; font-weight: 800; margin-bottom: 4px;
+            white-space: nowrap;
+        }
+        .chart-date-bottom {
+            font-size: 0.75rem; color: #555; margin-top: 5px; font-weight: bold; 
+            white-space: nowrap; margin-left: 0;
+        }
+        
+        /* --- Year View --- */
+        .year-cell { 
+            width: 45px; text-align: center; border: 1px solid #eee; 
+            padding: 5px 0; cursor: default; font-size: 0.8rem; vertical-align: top; 
+        }
+        .year-date-tag { 
+            display: inline-block; width: 20px; height: 20px; line-height: 20px; 
+            border-radius: 50%; font-size: 0.7rem; margin: 1px; text-align: center; cursor: help; 
+        }
+        .tag-annual { background-color: var(--color-accent); color: #333; font-weight: bold; }
+        .tag-other { background-color: #dc3545; color: white; }
+        
+        /* --- Mobile Year Card --- */
+        .mobile-year-card { background: white; border: 1px solid #e0e0e0; border-radius: 8px; margin-bottom: 15px; overflow: hidden; }
+        .mobile-year-header { background-color: var(--color-sub); color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; }
+        .mobile-month-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; }
+        .mobile-month-item { border: 1px solid #f1f1f1; border-radius: 4px; padding: 5px; min-height: 60px; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; background-color: #fafafa; }
+        .mobile-date-dot { width: 16px; height: 16px; line-height: 16px; border-radius: 50%; font-size: 0.6rem; text-align: center; color: white; margin-bottom: 2px; }
+        
+        .event-form-bg { background-color: #fff8e1; padding: 20px; border-radius: 8px; border: 1px solid #ffe082; margin-bottom: 15px; }
+    </style>
+</head>
+<body @click="globalClick">
+
+<div id="app">
+
+    <!-- Custom Modal -->
+    <div v-if="modal.visible" class="custom-modal-overlay">
+        <div class="custom-modal-box">
+            <div class="custom-modal-header">
+                <span><i class="bi bi-info-circle-fill me-2"></i>系統訊息</span>
+                <i class="bi bi-x-lg cursor-pointer" @click="closeModal" style="cursor: pointer;"></i>
+            </div>
+            <div class="custom-modal-body">
+                {{ modal.message }}
+            </div>
+            <div class="custom-modal-footer">
+                <button v-if="modal.type === 'confirm'" class="btn btn-secondary" @click="closeModal">取消</button>
+                <button class="btn btn-primary" @click="confirmModal">確定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Copy Modal -->
+    <div v-if="copyModal.visible" class="custom-modal-overlay">
+        <div class="custom-modal-box">
+            <div class="custom-modal-header">
+                <span><i class="bi bi-files me-2"></i>複製排班</span>
+                <i class="bi bi-x-lg cursor-pointer" @click="closeCopyModal"></i>
+            </div>
+            <div class="custom-modal-body text-start">
+                <label class="form-label fw-bold">來源日期：{{ rosterDate }}</label>
+                <div class="mb-3">
+                    <label class="form-label text-primary fw-bold">複製到目標日期：</label>
+                    <input type="date" v-model="copyModal.targetDate" class="form-control form-control-lg border-primary">
+                </div>
+                <div class="small text-muted bg-light p-2 rounded">
+                    <i class="bi bi-lightbulb"></i> 系統將複製 <b>{{ rosterDate }}</b> 當天所有的排班資料至您選擇的日期。
+                </div>
+            </div>
+            <div class="custom-modal-footer">
+                <button class="btn btn-secondary" @click="closeCopyModal">取消</button>
+                <button class="btn btn-warning fw-bold text-dark" @click="submitCopy">確定複製</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login Overlay -->
+    <div v-if="!isLoggedIn" class="login-overlay">
+        <div class="login-box">
+            <h3 class="mb-4 fw-bold" style="color: var(--color-sub)"><i class="bi bi-stars"></i> 腓利清潔服務有限公司</h3>
+            <div class="mb-3 text-start">
+                <label class="form-label fw-bold">登入名稱</label>
+                <input type="text" v-model="loginData.id" class="form-control" placeholder="請輸入帳號">
+            </div>
+            <div class="mb-3 text-start">
+                <label class="form-label fw-bold">登入密碼</label>
+                <input type="password" v-model="loginData.pw" class="form-control" placeholder="請輸入密碼" @keyup.enter="doLogin">
+            </div>
+            <button class="btn btn-navy w-100 py-2" @click="doLogin">安全登入</button>
+            <p v-if="loginError" class="text-danger mt-3 small fw-bold"><i class="bi bi-exclamation-triangle"></i> 帳號或密碼錯誤</p>
+        </div>
+    </div>
+
+    <!-- Main Application -->
+    <div v-else class="container-fluid">
+        <div class="row">
+            
+            <!-- Sidebar -->
+            <div class="col-md-2 sidebar d-none d-md-block p-0">
+                <div class="p-4"><h5 class="mb-0 fw-bold"><i class="bi bi-stars"></i> 腓利清潔</h5><small class="text-white-50">服務有限公司 V72</small></div>
+                <nav class="nav flex-column">
+                    <a class="nav-link" :class="{ active: currentTab === 'calendar_month' }" @click="currentTab = 'calendar_month'"><i class="bi bi-calendar-month"></i> 1. 月曆總覽</a>
+                    <a class="nav-link" :class="{ active: currentTab === 'calendar_list' }" @click="currentTab = 'calendar_list'"><i class="bi bi-list-task"></i> 2. 事件列表</a>
+                    <a class="nav-link" :class="{ active: currentTab === 'staff' }" @click="currentTab = 'staff'"><i class="bi bi-database-fill-gear"></i> 3. 資料庫與設定</a>
+                    <a class="nav-link" :class="{ active: currentTab === 'roster' }" @click="currentTab = 'roster'"><i class="bi bi-clipboard-check-fill"></i> 4. 工作安排</a>
+                    <a class="nav-link" :class="{ active: currentTab === 'leave_roster' }" @click="currentTab = 'leave_roster'"><i class="bi bi-table"></i> 5. 年假放取排表</a>
+                    <a class="nav-link" :class="{ active: currentTab === 'risk_control' }" @click="currentTab = 'risk_control'"><i class="bi bi-shield-exclamation"></i> 6. 智能風險控管</a>
+                    <a class="nav-link" :class="{ active: currentTab === 'analysis' }" @click="currentTab = 'analysis'"><i class="bi bi-graph-up-arrow"></i> 7. 營運概況分析</a>
+                </nav>
+                <div class="p-3 mt-auto"><button class="btn btn-outline-light w-100 btn-sm" @click="logout">登出</button></div>
+            </div>
+
+            <!-- Mobile Navbar -->
+            <nav class="navbar navbar-dark d-md-none mobile-navbar fixed-top">
+                <div class="container-fluid">
+                    <a class="navbar-brand" href="#">腓利清潔 (V72)</a>
+                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#mobileMenu"><span class="navbar-toggler-icon"></span></button>
+                    <div class="collapse navbar-collapse" id="mobileMenu">
+                        <ul class="navbar-nav mt-3">
+                            <li class="nav-item"><a class="nav-link" @click="switchTab('calendar_month')">1. 月曆總覽</a></li>
+                            <li class="nav-item"><a class="nav-link" @click="switchTab('calendar_list')">2. 事件列表</a></li>
+                            <li class="nav-item"><a class="nav-link" @click="switchTab('staff')">3. 資料庫設定</a></li>
+                            <li class="nav-item"><a class="nav-link" @click="switchTab('roster')">4. 工作安排</a></li>
+                            <li class="nav-item"><a class="nav-link" @click="switchTab('leave_roster')">5. 年假排表</a></li>
+                            <li class="nav-item"><a class="nav-link" @click="switchTab('risk_control')">6. 風險控管</a></li>
+                            <li class="nav-item"><a class="nav-link" @click="switchTab('analysis')">7. 營運分析</a></li>
+                            <li class="nav-item"><hr class="dropdown-divider bg-light"></li>
+                            <li class="nav-item"><a class="nav-link text-danger" @click="logout">登出系統</a></li>
+                        </ul>
+                    </div>
+                </div>
+            </nav>
+
+            <!-- Main Content Area -->
+            <div class="col-md-10 col-12 main-content">
+                
+                <!-- Datalists -->
+                <datalist id="schoolOptions"><option v-for="sc in schoolList" :value="sc.name"></option></datalist>
+                <datalist id="holidayOptions"><option v-for="h in holidayPresets" :value="h"></option></datalist>
+                <datalist id="memoOptions"><option v-for="m in memoPresets" :value="m"></option></datalist>
+                <datalist id="leaveOptions"><option v-for="l in leavePresets" :value="l"></option></datalist>
+                <datalist id="rosterNoteOptions"><option v-for="n in rosterNotePresets" :value="n"></option></datalist>
+
+                <!-- Context Menu -->
+                <div v-if="contextMenu.visible" :style="{top: contextMenu.y + 'px', left: contextMenu.x + 'px'}" class="context-menu">
+                    <div v-if="contextMenu.hasLeave" class="context-menu-item text-danger" @click.stop="deleteFromMenu"><i class="bi bi-trash"></i> 刪除此紀錄</div>
+                    <div v-else class="context-menu-item text-primary" @click.stop="addFromMenu"><i class="bi bi-plus-circle"></i> 新增年假</div>
+                    <div class="border-top my-1"></div>
+                    <div class="context-menu-item text-secondary" @click.stop="closeContextMenu"><i class="bi bi-x"></i> 取消</div>
+                </div>
+
+                <!-- 1. Calendar Month View -->
+                <div v-if="currentTab === 'calendar_month'">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h2 class="fw-bold text-dark mb-0">{{ formatMonthYear(calendarCursor) }}</h2>
+                        <div class="btn-group shadow-sm">
+                            <button class="btn btn-light border" @click="changeMonth(-1)">上個月</button>
+                            <button class="btn btn-light border" @click="resetToToday()">今天</button>
+                            <button class="btn btn-light border" @click="changeMonth(1)">下個月</button>
+                        </div>
+                    </div>
+                    <div class="calendar-container">
+                        <div class="calendar-header-row">
+                            <div class="cal-head-cell text-danger">週日</div>
+                            <div class="cal-head-cell" v-for="d in ['週一','週二','週三','週四','週五']">{{d}}</div>
+                            <div class="cal-head-cell text-danger">週六</div>
+                        </div>
+                        <div class="calendar-body">
+                            <div v-for="n in calendarPadStart" :key="'pad-'+n" class="cal-cell bg-light opacity-50"></div>
+                            <div v-for="day in calendarDaysData" :key="day.fullDate" class="cal-cell" :class="{ 'is-weekend': day.isWeekend, 'is-today': isToday(day.fullDate) }" @click="jumpToRoster(day.fullDate)" title="點擊跳轉至排班">
+                                <div class="d-flex justify-content-between">
+                                    <span class="cal-date-num">{{ day.dateNum }}</span>
+                                    <i v-if="hasRoster(day.fullDate)" class="bi bi-check-circle-fill text-success" style="font-size:6px"></i>
+                                </div>
+                                <div class="cal-events-wrapper">
+                                    <div v-for="evt in day.events" :key="evt.id" class="cal-pill" :class="{ 'pill-holiday': evt.type === 'school_holiday', 'pill-memo': evt.type === 'memo', 'pill-leave': evt.type === 'leave' }" :title="getEventTooltip(evt)">
+                                        <span v-if="evt.type==='leave'">🔴 {{ getStaffName(evt.staffId) }}</span>
+                                        <span v-if="evt.type==='school_holiday'">🟠 {{ getSchoolName(evt.schoolId) }}</span>
+                                        <span v-if="evt.type==='memo'">🔵 {{ evt.note }}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 2. Event List -->
+                <div v-if="currentTab === 'calendar_list'">
+                    <h4 class="mb-3">事件管理中心</h4>
+                    <div class="row g-3">
+                        <div class="col-lg-4 col-12">
+                            <div class="custom-card border-top border-4 border-primary">
+                                <h5 class="fw-bold mb-3">新增事件</h5>
+                                <div class="mb-3"><label>日期</label><input type="date" v-model="newEvent.date" class="form-control"></div>
+                                <div class="mb-3"><label>類型</label><select v-model="newEvent.type" class="form-select bg-light fw-bold"><option value="school_holiday">🟠 學校假期</option><option value="memo">🔵 工作備忘</option><option value="leave">🔴 員工請假</option></select></div>
+                                <div v-if="newEvent.type === 'school_holiday'" class="event-form-bg">
+                                    <label>選擇學校</label><input type="text" v-model="newEvent.schoolId" class="form-control mb-2" list="schoolOptions" placeholder="適用學校">
+                                    <label>假期名稱</label><input type="text" v-model="newEvent.note" class="form-control" list="holidayOptions" placeholder="如: 校慶">
+                                </div>
+                                <div v-if="newEvent.type === 'memo'" class="event-form-bg" style="background-color:#e1f5fe; border-color:#81d4fa;">
+                                    <label>關聯學校</label><input type="text" v-model="newEvent.schoolId" class="form-control mb-2" list="schoolOptions" placeholder="相關學校">
+                                    <label>備忘</label><input type="text" v-model="newEvent.note" class="form-control" list="memoOptions" placeholder="如: 洗地毯">
+                                </div>
+                                <div v-if="newEvent.type === 'leave'" class="event-form-bg" style="background-color:#ffebee; border-color:#ffcdd2;">
+                                    <label>選擇員工</label><select v-model="newEvent.staffId" class="form-select mb-2" @change="onStaffChange"><option v-for="s in staffList" :value="s.id">{{ s.name }}</option></select>
+                                    <label>所屬學校</label><input type="text" v-model="newEvent.schoolId" class="form-control mb-2" list="schoolOptions" placeholder="所屬學校">
+                                    <label>類型</label><input type="text" v-model="newEvent.note" class="form-control" list="leaveOptions" placeholder="如: 年假">
+                                </div>
+                                <button class="btn btn-navy w-100" @click="addEvent">確認新增</button>
+                            </div>
+                        </div>
+
+                        <div class="col-lg-8 col-12">
+                            <div class="custom-card" style="max-height: 80vh; overflow-y: auto;">
+                                <div class="d-flex justify-content-between align-items-center mb-3 sticky-top bg-white pt-2 border-bottom pb-2">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <h5 class="fw-bold mb-0"><i class="bi bi-list-check"></i> 事件列表</h5>
+                                        <input type="month" v-model="eventListMonth" class="form-control form-control-sm" style="width: 140px;">
+                                    </div>
+                                    <button v-if="filteredEventsForList.length > 0" class="btn btn-sm btn-outline-danger" @click="batchDeleteEvents">🗑️ 清空本月</button>
+                                </div>
+                                
+                                <div v-if="filteredEventsForList.length === 0" class="text-center text-muted py-5">
+                                    <i class="bi bi-calendar-x display-4 mb-3 d-block"></i>
+                                    所選月份 ({{ eventListMonth }}) 無事件
+                                </div>
+                                <div v-else class="table-responsive">
+                                    <table class="table table-hover align-middle" style="min-width:600px">
+                                        <thead class="table-light"><tr><th>日期</th><th>類型</th><th>對象</th><th>內容</th><th>操作</th></tr></thead>
+                                        <tbody>
+                                            <tr v-for="event in filteredEventsForList" :key="event.originalIndex">
+                                                <td>{{ event.date }}</td>
+                                                <td><span class="badge" :class="{'bg-danger':event.type=='leave','bg-warning text-dark':event.type=='school_holiday','bg-info text-dark':event.type=='memo'}">{{ event.type === 'leave' ? '請假' : (event.type === 'school_holiday' ? '學校假期' : '備忘') }}</span></td>
+                                                <td><div v-if="event.staffId"><span v-if="event.schoolId" class="fw-bold text-primary">[{{ getSchoolName(event.schoolId) }}]</span> {{ getStaffName(event.staffId) }}</div><div v-else-if="event.schoolId"><i class="bi bi-building"></i> {{ getSchoolName(event.schoolId) }}</div></td>
+                                                <td>{{ event.note }}</td>
+                                                <td><button class="btn btn-sm btn-outline-danger" @click="deleteEvent(event.originalIndex)">✕</button></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. Staff & Database -->
+                <div v-if="currentTab === 'staff'">
+                    <h4 class="mb-3">資料庫設定</h4>
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-3">
+                            <div class="custom-card h-100 border-warning">
+                                <h6 class="text-warning-emphasis">假期名稱庫</h6>
+                                <div class="input-group mb-2"><input type="text" class="form-control form-control-sm" v-model="newHolidayPreset"><button class="btn btn-warning btn-sm" @click="addPreset('holiday')">+</button></div>
+                                <div class="d-flex flex-wrap gap-2"><span v-for="(h, i) in holidayPresets" class="badge-preset bg-warning text-dark border border-warning">{{ h }} <i class="bi bi-x badge-remove-btn" @click.stop="removePreset('holiday', i)"></i></span></div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="custom-card h-100 border-info">
+                                <h6 class="text-info-emphasis">工作備忘庫</h6>
+                                <div class="input-group mb-2"><input type="text" class="form-control form-control-sm" v-model="newMemoPreset"><button class="btn btn-info btn-sm text-white" @click="addPreset('memo')">+</button></div>
+                                <div class="d-flex flex-wrap gap-2"><span v-for="(m, i) in memoPresets" class="badge-preset bg-info text-dark border border-info">{{ m }} <i class="bi bi-x badge-remove-btn" @click.stop="removePreset('memo', i)"></i></span></div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="custom-card h-100 border-primary">
+                                <h6 class="text-primary">排班備註庫</h6>
+                                <div class="input-group mb-2"><input type="text" class="form-control form-control-sm" v-model="newRosterNotePreset"><button class="btn btn-primary btn-sm" @click="addPreset('rosterNote')">+</button></div>
+                                <div class="d-flex flex-wrap gap-2"><span v-for="(n, i) in rosterNotePresets" class="badge-preset bg-primary text-white border border-primary">{{ n }} <i class="bi bi-x badge-remove-btn text-light" @click.stop="removePreset('rosterNote', i)"></i></span></div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="custom-card h-100 border-secondary">
+                                <h6 class="text-secondary">時間預設</h6>
+                                <div class="mb-2">
+                                    <input type="text" class="form-control form-control-sm mb-1" v-model="newTimePreset.label" placeholder="名稱">
+                                    <div class="input-group input-group-sm"><input type="time" class="form-control" v-model="newTimePreset.start"><input type="time" class="form-control" v-model="newTimePreset.end"></div>
+                                </div>
+                                <button class="btn btn-secondary btn-sm w-100" @click="addTimePreset">新增時間</button>
+                                <hr class="my-2">
+                                <div class="d-flex flex-wrap gap-2" style="max-height:100px;overflow-y:auto;"><span v-for="(t, i) in timePresets" :key="i" class="badge bg-light text-dark border">{{t.label}} <i class="bi bi-x text-danger ms-1 fw-bold badge-remove-btn" @click.stop="removeTimePreset(i)"></i></span></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="custom-card">
+                                <h6>學校名單</h6>
+                                <div class="input-group mb-2"><input type="text" class="form-control" v-model="newSchoolName"><button class="btn btn-secondary" @click="addSchool">新增</button></div>
+                                <ul class="list-group list-group-flush" style="max-height:200px;overflow-y:auto">
+                                    <li class="list-group-item py-1 d-flex justify-content-between align-items-center" v-for="(sc, index) in schoolList">
+                                        {{sc.name}}
+                                        <button class="btn btn-sm btn-outline-danger" @click="removeSchool(index)"><i class="bi bi-trash"></i></button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="custom-card">
+                                <h6>員工名單</h6>
+                                <div class="input-group mb-2"><input type="text" class="form-control" v-model="newStaff.name" placeholder="姓名"><input type="text" class="form-control" v-model="newStaff.defaultSchoolId" list="schoolOptions" placeholder="學校"><button class="btn btn-primary" @click="addStaff">新增</button></div>
+                                <ul class="list-group list-group-flush" style="max-height:200px;overflow-y:auto">
+                                    <li class="list-group-item py-1 d-flex justify-content-between align-items-center" v-for="(s, index) in staffList">
+                                        <div>{{s.name}} <small class="text-muted">({{getSchoolName(s.defaultSchoolId)}})</small></div>
+                                        <button class="btn btn-sm btn-outline-danger" @click="removeStaff(index)"><i class="bi bi-trash"></i></button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. Roster (Work Schedule) -->
+                <div v-if="currentTab === 'roster'">
+                    <div class="row g-3">
+                        <div class="col-lg-4 col-12">
+                            <div class="custom-card sticky-top" style="top:80px; z-index:10">
+                                <h5 class="fw-bold">新增工作安排</h5>
+                                <div class="mb-3"><label>日期</label><input type="date" v-model="rosterDate" class="form-control"></div>
+                                <div class="mb-3">
+                                    <label>學校</label>
+                                    <select v-model="inputForm.schoolId" class="form-select" @change="inputForm.staffIds = []">
+                                        <option value="">-- 請先選擇學校 --</option>
+                                        <option v-for="sc in schoolList" :value="sc.id">{{sc.name}}</option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label>員工 (多選)</label>
+                                    <div class="custom-multiselect p-2 border rounded" style="max-height:150px;overflow-y:auto">
+                                        <div v-for="s in filteredStaffList" :key="s.id"><input type="checkbox" :value="s.id" v-model="inputForm.staffIds"> {{s.name}}</div>
+                                    </div>
+                                </div>
+                                <div class="mb-3">
+                                    <div class="d-flex justify-content-between mb-1"><label>時間</label><small>快速:</small></div>
+                                    <div class="d-flex flex-wrap gap-1 mb-2"><button v-for="t in timePresets" class="time-btn" @click="applyTime(t)">{{ t.label }}</button></div>
+                                    <div class="d-flex gap-2"><input type="time" v-model="inputForm.startTime" class="form-control"><input type="time" v-model="inputForm.endTime" class="form-control"></div>
+                                </div>
+                                <div class="mb-3"><label>車費</label><input type="number" v-model="inputForm.transport" class="form-control" placeholder="0"></div>
+                                <div class="mb-3"><label>內容</label><input type="text" v-model="inputForm.jobContent" class="form-control" list="memoOptions"></div>
+                                <div class="mb-3"><label>備註</label><input type="text" v-model="inputForm.note" class="form-control" list="rosterNoteOptions"></div>
+                                <button class="btn btn-navy w-100" @click="addRoster">加入排程</button>
+                            </div>
+                        </div>
+                        <div class="col-lg-8 col-12">
+                            <div class="d-flex justify-content-end gap-2 mb-2">
+                                <button class="btn btn-warning btn-sm fw-bold text-dark" @click="openCopyModal">📋 複製</button>
+                                <button class="btn btn-light border text-danger btn-sm" @click="clearDailyRoster">清除本日</button>
+                                <button class="btn btn-info btn-sm text-white" @click="exportNoticeBoard">匯出看板</button>
+                                <button class="btn btn-primary btn-sm" @click="exportToImage">匯出圖片</button>
+                            </div>
+                            <div id="full-roster-export" class="p-3 bg-white rounded border">
+                                <h2 class="text-center fw-bold mb-4" style="color: #1f4493; border-bottom: 3px solid #fed400; padding-bottom: 10px;">{{ rosterDate }} 工作安排</h2>
+                                <div class="notice-board mb-3" id="notice-board-capture">
+                                    <div class="notice-title small text-muted">事項看板</div>
+                                    <div v-for="(notice, index) in dailyNotices" :key="index" class="notice-item">
+                                        <span class="notice-dot" :class="{'dot-red': notice.type==='leave', 'dot-blue': notice.type!=='leave'}"></span>
+                                        <div>
+                                            <span v-if="notice.type === 'school_holiday'">[學校假期] {{ getSchoolName(notice.schoolId) }} : {{ notice.note }}</span>
+                                            <span v-else-if="notice.type === 'memo'">[工作備忘] {{ getSchoolName(notice.schoolId) }} : {{ notice.note }}</span>
+                                            <span v-else>[請假] {{ getStaffName(notice.staffId) }} ({{ getSchoolName(notice.schoolId || getStaffSchoolId(notice.staffId)) }}) : {{ notice.note }}</span>
+                                        </div>
+                                    </div>
+                                    <div v-if="dailyNotices.length === 0" class="text-muted small ms-2">今日無特別事項</div>
+                                </div>
+                                <div id="capture-area">
+                                    <div v-for="group in groupedRoster" :key="group.key">
+                                        <div v-if="editingKey !== group.key" class="p-3 bg-white rounded mb-3 border shadow-sm roster-card-item">
+                                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                                <h5 class="mb-0 fw-bold">{{ getSchoolName(group.schoolId) }} <span class="badge bg-success bg-opacity-75 ms-2 fs-6" style="min-width:70px">薪 ${{ group.totalWage }}</span><span v-if="group.totalTransport > 0" class="badge bg-warning text-dark ms-1 fs-6" style="min-width:60px">車 ${{ group.totalTransport }}</span></h5>
+                                                <span class="badge bg-secondary">{{ group.startTime }}-{{ group.endTime }}</span>
+                                            </div>
+                                            <div class="d-flex justify-content-between align-items-end">
+                                                <div>
+                                                    <div class="text-primary fw-bold">{{ group.staffNames.join(', ') }}</div>
+                                                    <div class="small text-muted">{{ group.jobContent }} <span v-if="group.note" class="text-danger">({{ group.note }})</span></div>
+                                                </div>
+                                                <div class="d-flex gap-2" data-html2canvas-ignore="true">
+                                                    <button class="btn btn-sm btn-outline-secondary" @click="startEdit(group)">修</button>
+                                                    <button class="btn btn-sm btn-outline-danger" @click="deleteGroup(group.ids)">刪</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div v-else class="p-3 rounded mb-3 border shadow-sm roster-card-item edit-mode-card">
+                                            <div class="d-flex justify-content-between mb-2 border-bottom pb-1"><strong class="text-warning-emphasis">編輯中</strong></div>
+                                            <div class="row g-2 mb-2">
+                                                <div class="col-6"><select v-model="editForm.schoolId" class="form-select form-select-sm"><option v-for="sc in schoolList" :value="sc.id">{{sc.name}}</option></select></div>
+                                                <div class="col-6"><div class="input-group input-group-sm"><input type="time" class="form-control" v-model="editForm.startTime"><input type="time" class="form-control" v-model="editForm.endTime"></div></div>
+                                                <div class="col-12"><div class="multi-select-box bg-white border rounded p-2" style="max-height:100px;overflow-y:auto"><div v-for="s in getStaffBySchool(editForm.schoolId)" :key="s.id"><input type="checkbox" :value="s.id" v-model="editForm.staffIds"> {{s.name}}</div></div></div>
+                                                <div class="col-6"><input type="text" class="form-control form-control-sm" v-model="editForm.jobContent"></div>
+                                                <div class="col-6"><input type="text" class="form-control form-control-sm" v-model="editForm.note"></div>
+                                            </div>
+                                            <div class="text-end"><button class="btn btn-sm btn-secondary me-2" @click="cancelEdit">取消</button><button class="btn btn-sm btn-primary" @click="saveEdit">保存</button></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. Leave Roster (Annual Leave Table) -->
+                <div v-if="currentTab === 'leave_roster'">
+                    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                        <h4 class="fw-bold text-dark mb-0">年假排表</h4>
+                        <div class="d-flex gap-2 flex-wrap">
+                            <div class="btn-group">
+                                <input type="radio" class="btn-check" id="vm" value="month" v-model="leaveViewMode"><label class="btn btn-outline-primary btn-sm" for="vm">月</label>
+                                <input type="radio" class="btn-check" id="vy" value="year" v-model="leaveViewMode"><label class="btn btn-outline-primary btn-sm" for="vy">年</label>
+                            </div>
+                            <div class="btn-group" v-if="leaveViewMode==='month'">
+                                <button class="btn btn-sm btn-light border" @click="changeLeaveMonth(-1)">&lt;</button>
+                                <span class="btn btn-sm btn-light border" style="min-width:80px">{{ formatMonthYear(leaveRosterCursor) }}</span>
+                                <button class="btn btn-sm btn-light border" @click="changeLeaveMonth(1)">&gt;</button>
+                            </div>
+                            <div class="btn-group" v-if="leaveViewMode==='year'">
+                                <button class="btn btn-sm btn-light border" @click="changeLeaveYear(-1)">&lt;</button>
+                                <span class="btn btn-sm btn-light border" style="min-width:80px">{{ leaveRosterCursor.getFullYear() }}</span>
+                                <button class="btn btn-sm btn-light border" @click="changeLeaveYear(1)">&gt;</button>
+                            </div>
+                            <button class="btn btn-sm btn-success" @click="exportExcel">Excel</button>
+                            <button class="btn btn-sm btn-danger" @click="exportPDF">PDF</button>
+                        </div>
+                    </div>
+                    <h5 id="year-view-title" class="text-center fw-bold text-primary mb-3 d-none d-print-block">腓利清潔 - 年假排表 ({{ leaveViewMode==='year' ? leaveRosterCursor.getFullYear() + '年' : formatMonthYear(leaveRosterCursor) }})</h5>
+                    
+                    <div v-if="leaveViewMode === 'month'" id="month-view-table" class="leave-table-container">
+                        <table class="leave-table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th class="sticky-col col-school">學校</th>
+                                    <th class="sticky-col col-name">姓名</th>
+                                    <th v-for="d in leaveMonthDays" :key="d.dateNum" class="date-col" :class="{ 'weekend': d.isWeekend }">{{ d.dateNum }}</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="(staff, index) in sortedStaffList" :key="staff.id" :class="{'school-group-border': isNewSchoolGroup(index)}">
+                                    <td class="sticky-col col-school">{{ getSchoolName(staff.defaultSchoolId) }}</td>
+                                    <td class="sticky-col col-name">{{ staff.name }} <i class="bi bi-trash row-delete-btn" @click="removeStaff(index)"></i></td>
+                                    <td v-for="d in leaveMonthDays" :key="d.fullDate" class="cell-clickable" :class="{ 'cell-weekend': d.isWeekend }" @click="quickAddAnnualLeave(staff.id, d.fullDate)" @contextmenu.prevent="showContextMenu($event, staff.id, d.fullDate)">
+                                        <span v-if="getLeaveInfo(staff.id, d.fullDate)?.type === 'leave'" class="leave-block" :class="getLeaveInfo(staff.id, d.fullDate).isAnnual ? 'leave-annual' : 'leave-other'" :title="'[' + getLeaveInfo(staff.id, d.fullDate).note + ']'">{{ getLeaveInfo(staff.id, d.fullDate).isAnnual ? '年' : '假' }}</span>
+                                        <span v-else-if="getLeaveInfo(staff.id, d.fullDate)?.type === 'school_holiday'" class="leave-block leave-school-hol" :title="'學校假: ' + getLeaveInfo(staff.id, d.fullDate).note">休</span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div v-if="leaveViewMode === 'year'" id="year-view-table" class="leave-table-container d-none d-md-block">
+                        <table class="leave-table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th class="sticky-col col-school">學校</th>
+                                    <th class="sticky-col col-name">姓名</th>
+                                    <th v-for="m in 12" :key="m" class="col-month">{{m}}月</th>
+                                    <th class="bg-light col-total">總</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="staff in sortedStaffList" :key="staff.id">
+                                    <td class="sticky-col col-school">{{ getSchoolName(staff.defaultSchoolId) }}</td>
+                                    <td class="sticky-col col-name">{{ staff.name }}</td>
+                                    <td v-for="(dates, idx) in getYearlyLeaveDetail(staff.id)" :key="idx" class="year-cell">
+                                        <span v-for="d in dates" class="year-date-tag" :class="d.isAnnual ? 'tag-annual' : 'tag-other'" :title="d.isAnnual?'年假':'其他假'">{{ d.day }}</span>
+                                    </td>
+                                    <td class="fw-bold">{{ getYearlyLeaveStats(staff.id).reduce((a,b)=>a+b,0) }}</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div v-if="leaveViewMode === 'year'" class="d-md-none">
+                        <div v-for="staff in sortedStaffList" :key="staff.id" class="mobile-year-card">
+                            <div class="mobile-year-header">
+                                <div><strong>{{ staff.name }}</strong><small class="ms-2 opacity-75">{{ getSchoolName(staff.defaultSchoolId) }}</small></div>
+                                <span class="badge bg-warning text-dark">{{ getYearlyLeaveStats(staff.id).reduce((a,b)=>a+b,0) }}天</span>
+                            </div>
+                            <div class="mobile-year-body">
+                                <div class="mobile-month-grid">
+                                    <div v-for="(dates, idx) in getYearlyLeaveDetail(staff.id)" :key="idx" class="mobile-month-item">
+                                        <div class="mobile-month-name">{{ idx + 1 }}月</div>
+                                        <div v-if="dates.length === 0" class="text-muted" style="font-size:0.6rem">-</div>
+                                        <div v-else><span v-for="d in dates" :key="d.day" class="mobile-date-dot" :class="d.isAnnual ? 'tag-annual' : 'tag-other'">{{ d.day }}</span></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. Risk Control -->
+                <div v-if="currentTab === 'risk_control'">
+                    <h4 class="mb-3 text-dark fw-bold">智能風險控管 ({{riskDate}})</h4>
+                    <div class="row g-3 mb-4">
+                        <div class="col-12 col-md-4"><div class="kpi-card-new kpi-black"><div class="kpi-label">員工數</div><div class="kpi-number">{{ staffList.length }}</div></div></div>
+                        <div class="col-12 col-md-4"><div class="kpi-card-new kpi-green"><div class="kpi-label">總剩餘年假</div><div class="kpi-number text-success">{{ totalRemainingLeave }}</div></div></div>
+                        <div class="col-12 col-md-4"><div class="kpi-card-new kpi-red"><div class="kpi-label">同校撞假 (30天)</div><div class="kpi-number text-danger">{{ collisionCount }}</div></div></div>
+                    </div>
+                    <div class="row g-3">
+                        <div class="col-12 col-md-8">
+                            <div class="risk-alert-section">
+                                <div class="risk-header"><i class="bi bi-bell-fill"></i> 同校撞假警報 (≥2人)</div>
+                                <div v-if="collisionAlerts.length===0" class="text-muted p-5 text-center">目前無風險。</div>
+                                <div v-else>
+                                    <div v-for="alert in collisionAlerts" class="risk-row-alert">
+                                        <div><span class="risk-date-badge me-2">{{ alert.date }}</span> <span class="risk-school-name">{{ alert.schoolName }}</span></div>
+                                        <div class="risk-staff-name small">請假: {{ alert.staffNames.join(', ') }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-12 col-md-4">
+                            <div class="risk-alert-section">
+                                <div class="risk-header" style="color:var(--color-main)"><i class="bi bi-calendar-event"></i> 未來 30 天假期</div>
+                                <div class="risk-list-box">
+                                    <div v-for="h in upcomingHolidays" class="risk-row-future"><span class="future-date">{{ h.date.substring(5) }}</span><span class="future-note">{{ h.note }}</span><span class="future-school">{{ getSchoolName(h.schoolId) }}</span></div>
+                                    <div v-if="upcomingHolidays.length===0" class="text-center py-3 text-muted">無近期假期</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 7. Analysis (V72 Enhanced) -->
+                <div v-if="currentTab === 'analysis'">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h4 class="mb-0">營運分析</h4>
+                        <!-- Month Picker for Analysis -->
+                        <div class="d-flex align-items-center gap-2">
+                            <label class="fw-bold small">分析月份：</label>
+                            <input type="month" v-model="analysisMonth" class="form-control form-control-sm" style="width: 150px;">
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mb-4">
+                        <div class="col-6 col-md-3"><div class="analysis-card an-purple"><div class="an-label">總支出</div><div class="an-value">${{ currentMonthAnalysis.totalExpense }}</div></div></div>
+                        <div class="col-6 col-md-3"><div class="analysis-card an-green"><div class="an-label">薪金</div><div class="an-value">${{ currentMonthAnalysis.totalWages }}</div></div></div>
+                        <div class="col-6 col-md-3"><div class="analysis-card an-orange"><div class="an-label">車費</div><div class="an-value">${{ currentMonthAnalysis.totalTransport }}</div></div></div>
+                        <div class="col-6 col-md-3"><div class="analysis-card an-blue"><div class="an-label">人次</div><div class="an-value">{{ currentMonthAnalysis.totalHeadcount }}</div></div></div>
+                    </div>
+                    
+                    <!-- Chart Section -->
+                    <div class="row g-3 mb-4">
+                        <div class="col-md-12">
+                            <div class="custom-card h-100">
+                                <h6>每日支出趨勢 ({{ analysisMonth }})</h6>
+                                <div class="chart-scroll-wrapper">
+                                    <div class="chart-container">
+                                        <div class="chart-row">
+                                            <div v-for="d in currentMonthAnalysis.dailyChartData" :key="d.day" class="chart-col">
+                                                <div class="chart-bar-bg">
+                                                    <div class="chart-bar-fill" :style="{ height: (d.cost / (currentMonthAnalysis.maxDailyExpense || 1) * 100) + '%' }" :title="'$' + d.cost"></div>
+                                                </div>
+                                                <div v-if="d.cost > 0" class="chart-val-top" style="position: absolute; bottom: calc(100% + 5px);">${{ d.cost }}</div>
+                                                <div class="chart-date-bottom">{{ d.day }}({{ d.weekDay }})</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- V72 New Table: Daily Breakdown & Leave Stats -->
+                    <div class="row g-3">
+                        <div class="col-md-7">
+                            <div class="custom-card h-100">
+                                <h6><i class="bi bi-table"></i> 每日支出明細表</h6>
+                                <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+                                    <table class="table table-sm table-hover align-middle">
+                                        <thead class="table-light sticky-top">
+                                            <tr>
+                                                <th>日期</th>
+                                                <th class="text-success">薪金</th>
+                                                <th class="text-warning text-dark">車費</th>
+                                                <th class="fw-bold text-primary">總額</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr v-for="day in currentMonthAnalysis.dailyDetails" :key="day.dateStr">
+                                                <td>{{ day.dateStr }} <span class="badge bg-light text-dark border">{{ day.weekDay }}</span></td>
+                                                <td class="text-success">${{ day.wage }}</td>
+                                                <td class="text-warning text-dark">${{ day.transport }}</td>
+                                                <td class="fw-bold text-primary fs-6">${{ day.total }}</td>
+                                            </tr>
+                                            <tr v-if="currentMonthAnalysis.dailyDetails.length === 0"><td colspan="4" class="text-center text-muted py-3">本月無支出紀錄</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-5">
+                            <div class="custom-card h-100">
+                                <h6><i class="bi bi-person-x"></i> 本月請假統計</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-striped">
+                                        <thead><tr><th>員工</th><th>學校</th><th>請假天數</th><th>最近請假</th></tr></thead>
+                                        <tbody>
+                                            <tr v-for="stat in currentMonthAnalysis.leaveStats" :key="stat.name">
+                                                <td>{{ stat.name }}</td>
+                                                <td>{{ getSchoolName(stat.schoolId) }}</td>
+                                                <td class="fw-bold text-danger">{{ stat.count }}</td>
+                                                <td>{{ stat.lastDate }}</td>
+                                            </tr>
+                                            <tr v-if="currentMonthAnalysis.leaveStats.length === 0"><td colspan="4" class="text-center text-muted">無請假紀錄</td></tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const { createApp } = Vue;
+
+    createApp({
+        data() {
+            return {
+                isLoggedIn: false, 
+                loginData: { id: '', pw: '' }, 
+                loginError: false,
+                currentTab: 'calendar_list', 
+                calendarCursor: new Date(), 
+                leaveRosterCursor: new Date(), 
+                leaveViewMode: 'month',
+                contextMenu: { visible: false, x: 0, y: 0, staffId: null, date: null, hasLeave: false },
+                showStaffDropdown: false, 
+                
+                // Modal State
+                modal: { visible: false, message: '', type: 'info', callback: null },
+                
+                // V70 Copy Modal State
+                copyModal: { visible: false, targetDate: '' },
+
+                eventListMonth: new Date().toISOString().slice(0, 7), 
+                // V71 Analysis Month
+                analysisMonth: new Date().toISOString().slice(0, 7),
+                
+                riskDate: new Date().toISOString().split('T')[0],
+
+                holidayPresets: ['元旦', '農曆新年', '校慶', '聖誕節'],
+                memoPresets: ['大掃除', '洗地毯', '抹窗', '打蠟'],
+                leavePresets: ['年假', '病假', '事假', '工傷'],
+                rosterNotePresets: ['帶備鎖匙', '注意地滑', '需要打卡', '穿著整齊制服', '自備午膳'],
+                timePresets: [{ label: '早班', start: '08:00', end: '13:00' }, { label: '午班', start: '13:00', end: '18:00' }, { label: '全日', start: '09:00', end: '18:00' }],
+
+                newHolidayPreset: '', newMemoPreset: '', newLeavePreset: '', newTimePreset: { label: '', start: '', end: '' }, newRosterNotePreset: '',
+
+                schoolList: [ { id: 'SCH01', name: '香港大學' }, { id: 'SCH02', name: '聖馬可小學' }, { id: 'SCH03', name: '救世軍' } ],
+                
+                staffList: [ 
+                    { id: 'S001', name: '陳大文', role: '隊長', defaultSchoolId: 'SCH01', leaveTotal: 12 }, 
+                    { id: 'S002', name: '張志強', role: '司機', defaultSchoolId: 'SCH02', leaveTotal: 10 },
+                    { id: 'S003', name: '何月冰', role: '清潔', defaultSchoolId: 'SCH03', leaveTotal: 7 },
+                    { id: 'S004', name: '梁杏芳', role: '清潔', defaultSchoolId: 'SCH03', leaveTotal: 7 },
+                    { id: 'S005', name: '林奇穎', role: '清潔', defaultSchoolId: '流動組', leaveTotal: 7 },
+                    { id: 'S006', name: '曾國超', role: '清潔', defaultSchoolId: '總部', leaveTotal: 14 }
+                ],
+                
+                events: [
+                    { date: '2025-01-01', type: 'school_holiday', schoolId: '公眾假期', note: '元旦' },
+                    { date: '2025-01-29', type: 'school_holiday', schoolId: '公眾假期', note: '農曆年初一' },
+                    { date: '2025-01-30', type: 'school_holiday', schoolId: '公眾假期', note: '農曆年初二' },
+                    { date: '2025-01-31', type: 'school_holiday', schoolId: '公眾假期', note: '農曆年初三' },
+                    { date: '2025-04-04', type: 'school_holiday', schoolId: '公眾假期', note: '清明節' },
+                    { date: '2025-04-18', type: 'school_holiday', schoolId: '公眾假期', note: '耶穌受難節' },
+                    { date: '2025-04-19', type: 'school_holiday', schoolId: '公眾假期', note: '耶穌受難節翌日' },
+                    { date: '2025-04-21', type: 'school_holiday', schoolId: '公眾假期', note: '復活節星期一' },
+                    { date: '2025-05-01', type: 'school_holiday', schoolId: '公眾假期', note: '勞動節' },
+                    { date: '2025-05-05', type: 'school_holiday', schoolId: '公眾假期', note: '佛誕' },
+                    { date: '2025-05-31', type: 'school_holiday', schoolId: '公眾假期', note: '端午節' },
+                    { date: '2025-07-01', type: 'school_holiday', schoolId: '公眾假期', note: '特區成立紀念日' },
+                    { date: '2025-10-01', type: 'school_holiday', schoolId: '公眾假期', note: '國慶日' },
+                    { date: '2025-10-07', type: 'school_holiday', schoolId: '公眾假期', note: '中秋節翌日' },
+                    { date: '2025-10-29', type: 'school_holiday', schoolId: '公眾假期', note: '重陽節' },
+                    { date: '2025-12-25', type: 'school_holiday', schoolId: '公眾假期', note: '聖誕節' },
+                    { date: '2025-12-26', type: 'school_holiday', schoolId: '公眾假期', note: '聖誕節後第一個周日' },
+                    { date: '2025-12-04', type: 'school_holiday', schoolId: 'SCH01', note: '校慶' }, 
+                    { date: '2025-12-04', type: 'school_holiday', schoolId: '流動組', note: '盤點日' },
+                    { date: '2025-12-04', type: 'memo', schoolId: 'SCH02', note: '洗地毯' },
+                    { date: '2025-12-05', type: 'leave', staffId: 'S001', schoolId: 'SCH01', note: '年假' },
+                    { date: '2025-11-27', type: 'leave', staffId: 'S002', schoolId: 'SCH02', note: '病假' },
+                    { date: '2025-12-20', type: 'leave', staffId: 'S003', schoolId: 'SCH03', note: '年假' },
+                    { date: '2025-12-20', type: 'leave', staffId: 'S004', schoolId: 'SCH03', note: '年假' }
+                ],
+                rosterData: [ 
+                    { id: 1, date: '2025-12-04', staffId: 'S001', schoolId: 'SCH01', startTime: '13:00', endTime: '17:00', jobContent: '一般清潔', note: '', wage: 280, transport: 50 },
+                    { id: 2, date: '2025-12-04', staffId: 'S002', schoolId: 'SCH01', startTime: '13:00', endTime: '17:00', jobContent: '一般清潔', note: '', wage: 600, transport: 0 }
+                ],
+
+                rosterDate: '2025-12-04',
+                newSchoolName: '', newStaff: {name:'', role:'清潔員', defaultSchoolId: ''},
+                newEvent: { date: '', type: 'school_holiday', staffId: '', schoolId: '', note: '' },
+                inputForm: { staffIds: [], schoolId: '', startTime: '09:00', endTime: '18:00', jobContent: '一般清潔', note: '', transport: 0 },
+
+                editingKey: null,
+                editForm: { ids: [], schoolId: '', staffIds: [], startTime: '', endTime: '', jobContent: '', note: '' }
+            }
+        },
+        computed: {
+            filteredEventsForList() {
+                if (!this.eventListMonth) return [];
+                return this.events
+                    .map((e, i) => ({...e, originalIndex: i})) 
+                    .filter(e => e.date.startsWith(this.eventListMonth))
+                    .sort((a, b) => new Date(a.date) - new Date(b.date));
+            },
+
+            currentMonthAnalysis() {
+                // V71: Use analysisMonth picker
+                const [y, m] = this.analysisMonth.split('-');
+                const targetYear = parseInt(y);
+                const targetMonth = parseInt(m) - 1; // 0-indexed
+
+                const monthRosters = this.rosterData.filter(r => { 
+                    const d = new Date(r.date); 
+                    return d.getFullYear() === targetYear && d.getMonth() === targetMonth; 
+                });
+
+                const totalWages = monthRosters.reduce((sum, r) => sum + (r.wage || 0), 0);
+                const totalTransport = monthRosters.reduce((sum, r) => sum + (r.transport || 0), 0);
+                const totalExpense = totalWages + totalTransport;
+                const totalHeadcount = monthRosters.length;
+                
+                // Detailed Daily Chart Data
+                const dailyTrendMap = {};
+                let maxDailyExpense = 0;
+                // V72: Daily Breakdown Detail Map for Table
+                const dailyBreakdown = {}; // Key: Day, Value: {wage, transport, total}
+                
+                monthRosters.forEach(r => { 
+                    const day = new Date(r.date).getDate(); 
+                    const wage = r.wage || 0;
+                    const trans = r.transport || 0;
+                    const cost = wage + trans;
+                    
+                    dailyTrendMap[day] = (dailyTrendMap[day] || 0) + cost; 
+                    if(dailyTrendMap[day] > maxDailyExpense) maxDailyExpense = dailyTrendMap[day]; 
+                    
+                    // Accumulate for table
+                    if (!dailyBreakdown[day]) dailyBreakdown[day] = { wage: 0, transport: 0, total: 0 };
+                    dailyBreakdown[day].wage += wage;
+                    dailyBreakdown[day].transport += trans;
+                    dailyBreakdown[day].total += cost;
+                });
+
+                // Generate full days for chart
+                const daysInMonth = new Date(targetYear, targetMonth + 1, 0).getDate();
+                const weekMap = ['日','一','二','三','四','五','六'];
+                const dailyChartData = [];
+                for (let i = 1; i <= daysInMonth; i++) {
+                    const dateObj = new Date(targetYear, targetMonth, i);
+                    const cost = dailyTrendMap[i] || 0;
+                    dailyChartData.push({
+                        day: i,
+                        weekDay: weekMap[dateObj.getDay()],
+                        cost: cost
+                    });
+                }
+                
+                // Generate Table Data (Sorted by Date)
+                const dailyDetails = Object.keys(dailyBreakdown).map(day => {
+                    const d = parseInt(day);
+                    const dateObj = new Date(targetYear, targetMonth, d);
+                    const dateStr = `${targetYear}-${String(targetMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                    return {
+                        dateStr: dateStr,
+                        weekDay: weekMap[dateObj.getDay()],
+                        wage: dailyBreakdown[day].wage,
+                        transport: dailyBreakdown[day].transport,
+                        total: dailyBreakdown[day].total
+                    };
+                }).sort((a,b) => new Date(a.dateStr) - new Date(b.dateStr));
+
+                // Leave Stats
+                const leaveStats = [];
+                this.staffList.forEach(s => { 
+                    const leaves = this.events.filter(e => {
+                        if (e.type !== 'leave' || e.staffId !== s.id) return false;
+                        const d = new Date(e.date);
+                        return d.getFullYear() === targetYear && d.getMonth() === targetMonth;
+                    }); 
+                    if(leaves.length > 0) { 
+                        leaves.sort((a,b) => new Date(b.date) - new Date(a.date)); // desc
+                        leaveStats.push({ 
+                            name: s.name, 
+                            schoolId: s.defaultSchoolId,
+                            count: leaves.length, 
+                            lastDate: leaves[0].date 
+                        }); 
+                    } 
+                });
+
+                return { totalWages, totalTransport, totalExpense, totalHeadcount, dailyTrend: dailyTrendMap, maxDailyExpense, dailyChartData, dailyDetails, leaveStats };
+            },
+            totalLeaveEntitlement() { return this.staffList.reduce((sum, s) => sum + (s.leaveTotal || 0), 0); },
+            totalRemainingLeave() { const totalUsed = this.events.filter(e => e.type === 'leave' && e.note.includes('年假')).length; return this.totalLeaveEntitlement - totalUsed; },
+            collisionAlerts() {
+                const today = new Date(this.riskDate); const future = new Date(today); future.setDate(today.getDate() + 30); const alerts = [];
+                for (let d = new Date(today); d <= future; d.setDate(d.getDate() + 1)) {
+                    const dateStr = d.toISOString().split('T')[0]; const leavesOnDay = this.events.filter(e => e.type === 'leave' && e.date === dateStr); const schoolGroups = {};
+                    leavesOnDay.forEach(l => { const sName = this.getSchoolName(this.getStaffSchoolId(l.staffId)); if(!schoolGroups[sName]) schoolGroups[sName] = []; schoolGroups[sName].push(this.getStaffName(l.staffId)); });
+                    for (const [sName, names] of Object.entries(schoolGroups)) { if (names.length >= 2) { alerts.push({ date: dateStr, schoolName: sName, staffNames: names }); } }
+                } return alerts;
+            },
+            collisionCount() { return this.collisionAlerts.length; },
+            upcomingHolidays() { const today = new Date(this.riskDate); const future = new Date(today); future.setDate(today.getDate() + 30); return this.events.filter(e => { const eDate = new Date(e.date); return e.type === 'school_holiday' && eDate >= today && eDate <= future; }).sort((a,b) => new Date(a.date) - new Date(b.date)); },
+            schoolRisks() { return this.schoolList.map(school => { const schoolStaff = this.staffList.filter(s => this.getSchoolName(s.defaultSchoolId) === school.name); const total = schoolStaff.length; let onLeave = 0; schoolStaff.forEach(s => { const isLeave = this.events.some(e => e.type === 'leave' && e.staffId === s.id && e.date === this.riskDate); if (isLeave) onLeave++; }); return { name: school.name, total: total, onLeave: onLeave }; }); },
+
+            filteredStaffList() { if (!this.inputForm.schoolId) return []; const targetSchoolName = this.getSchoolName(this.inputForm.schoolId); return this.staffList.filter(s => { const sn = this.getSchoolName(s.defaultSchoolId); return sn === targetSchoolName || sn === '通用' || sn === '流動組' || sn === '總部'; }); },
+            sortedStaffList() { return [...this.staffList].sort((a, b) => { const schoolA = this.getSchoolName(a.defaultSchoolId); const schoolB = this.getSchoolName(b.defaultSchoolId); if (schoolA < schoolB) return -1; if (schoolA > schoolB) return 1; if (a.name < b.name) return -1; if (a.name > b.name) return 1; return 0; }); },
+            filteredRoster() { return this.rosterData.filter(r => r.date === this.rosterDate); },
+            groupedRoster() { const groups = {}; this.filteredRoster.forEach(item => { const key = `${item.schoolId}-${item.startTime}-${item.endTime}-${item.jobContent}-${item.note}`; if (!groups[key]) { groups[key] = { key: key, schoolId: item.schoolId, startTime: item.startTime, endTime: item.endTime, jobContent: item.jobContent, note: item.note, staffNames: [this.getStaffName(item.staffId)], ids: [item.id], totalCost: (item.wage||0)+(item.transport||0), totalWage: (item.wage||0), totalTransport: (item.transport||0) }; } else { groups[key].staffNames.push(this.getStaffName(item.staffId)); groups[key].ids.push(item.id); groups[key].totalCost += (item.wage||0)+(item.transport||0); groups[key].totalWage += (item.wage||0); groups[key].totalTransport += (item.transport||0); } }); return Object.values(groups); },
+            dailyNotices() { return this.events.filter(e => e.date === this.rosterDate); },
+            sortedEvents() { return this.events.sort((a, b) => new Date(a.date) - new Date(b.date)); },
+            calendarPadStart() { return new Date(this.calendarCursor.getFullYear(), this.calendarCursor.getMonth(), 1).getDay(); },
+            calendarDaysData() { const year = this.calendarCursor.getFullYear(), month = this.calendarCursor.getMonth(); const daysInMonth = new Date(year, month + 1, 0).getDate(); let days = []; for(let i=1; i<=daysInMonth; i++) { const d = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`; const dayObj = new Date(d); days.push({ dateNum: i, fullDate: d, isWeekend: (dayObj.getDay()===0 || dayObj.getDay()===6), events: this.events.filter(e=>e.date===d) }); } return days; },
+            leaveMonthDays() { const year = this.leaveRosterCursor.getFullYear(), month = this.leaveRosterCursor.getMonth(); const daysInMonth = new Date(year, month + 1, 0).getDate(); const weekMap = ['日','一','二','三','四','五','六']; let days = []; for(let i=1; i<=daysInMonth; i++) { const d = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`; const dayObj = new Date(d); days.push({ dateNum: i, weekDay: weekMap[dayObj.getDay()], fullDate: d, isWeekend: (dayObj.getDay()===0 || dayObj.getDay()===6) }); } return days; }
+        },
+        methods: {
+            doLogin() { if(this.loginData.id === 'philip' && this.loginData.pw === '60986314') { this.isLoggedIn = true; this.loginError = false; } else { this.loginError = true; } },
+            logout() { this.isLoggedIn = false; this.loginData = {id:'', pw:''}; },
+            switchTab(tab) { this.currentTab = tab; if(window.innerWidth < 768) { var bsCollapse = new bootstrap.Collapse(document.getElementById('mobileMenu'), {toggle:false}); bsCollapse.hide(); } },
+
+            calculateWage(start, end) { 
+                if (!start || !end) return 0; const s = new Date(`1970-01-01T${start}`); const e = new Date(`1970-01-01T${end}`); 
+                let diffHours = (e - s) / 1000 / 60 / 60; if (diffHours < 0) diffHours += 24; 
+                if (diffHours <= 0) return 0; 
+                if (diffHours < 7) { return Math.round(diffHours * 70); } else { return 600; } 
+            },
+            
+            // --- Modal Functions ---
+            showModal(message, type = 'info', callback = null) {
+                this.modal.message = message;
+                this.modal.type = type;
+                this.modal.callback = callback;
+                this.modal.visible = true;
+            },
+            closeModal() {
+                this.modal.visible = false;
+                this.modal.callback = null;
+            },
+            confirmModal() {
+                if (this.modal.callback) this.modal.callback();
+                this.closeModal();
+            },
+
+            // --- V70 Copy Functions ---
+            openCopyModal() {
+                // Default target date to tomorrow
+                const tomorrow = new Date(this.rosterDate);
+                tomorrow.setDate(tomorrow.getDate() + 1);
+                this.copyModal.targetDate = tomorrow.toISOString().split('T')[0];
+                this.copyModal.visible = true;
+            },
+            closeCopyModal() {
+                this.copyModal.visible = false;
+            },
+            submitCopy() {
+                if (!this.copyModal.targetDate) return;
+                if (this.copyModal.targetDate === this.rosterDate) {
+                    this.showModal('目標日期不能與來源日期相同', 'info');
+                    return;
+                }
+                
+                // Check if target date already has data
+                const hasData = this.rosterData.some(r => r.date === this.copyModal.targetDate);
+                
+                const doCopy = () => {
+                    const sourceRoster = this.rosterData.filter(r => r.date === this.rosterDate);
+                    if (sourceRoster.length === 0) {
+                        this.closeCopyModal();
+                        this.showModal('來源日期無排班資料', 'info');
+                        return;
+                    }
+                    
+                    sourceRoster.forEach(item => {
+                        this.rosterData.push({
+                            ...item,
+                            id: Date.now() + Math.random(),
+                            date: this.copyModal.targetDate
+                        });
+                    });
+                    
+                    this.closeCopyModal();
+                    this.showModal(`成功複製 ${sourceRoster.length} 筆排班至 ${this.copyModal.targetDate}`, 'info', () => {
+                        this.rosterDate = this.copyModal.targetDate; // Jump to target
+                    });
+                };
+
+                if (hasData) {
+                    this.copyModal.visible = false; // Hide copy modal to show alert
+                    this.showModal(`目標日期 (${this.copyModal.targetDate}) 已有排班資料。確定要疊加複製嗎？`, 'confirm', doCopy);
+                } else {
+                    doCopy();
+                }
+            },
+
+            // --- Replaced Alerts/Confirms ---
+            exportNoticeBoard() { 
+                const el = document.getElementById('notice-board-capture'); 
+                if(el) { 
+                    html2canvas(el, { scale: 2, useCORS: true, backgroundColor: "#ffffff" }).then(c => { 
+                        const l = document.createElement('a'); l.download = `事項看板_${this.rosterDate}.png`; l.href = c.toDataURL(); l.click(); 
+                    }); 
+                } 
+            },
+            
+            exportToImage() { 
+                const el = document.getElementById('full-roster-export'); 
+                if(el) { 
+                    const noticeArea = document.getElementById('export-notice-area');
+                    if(noticeArea) noticeArea.style.display = 'block';
+                    html2canvas(el, { scale: 2, useCORS: true, backgroundColor: "#ffffff" }).then(c => { 
+                        const l = document.createElement('a'); l.download = `工作排班_${this.rosterDate}.png`; l.href = c.toDataURL(); l.click(); 
+                        if(noticeArea) noticeArea.style.display = 'none'; 
+                    }); 
+                } 
+            },
+            exportAnalysisImage() {
+                const el = document.getElementById('analysis-capture-area');
+                if(el) {
+                    html2canvas(el, { scale: 2, backgroundColor: "#ffffff" }).then(c => {
+                        const l = document.createElement('a'); l.download = `營運分析_${new Date().getMonth()+1}月.png`; l.href = c.toDataURL(); l.click();
+                    });
+                }
+            },
+
+            exportExcel() { const year = this.leaveRosterCursor.getFullYear(); const data = []; if (this.leaveViewMode === 'year') { this.sortedStaffList.forEach(staff => { const details = this.getYearlyLeaveDetail(staff.id); const row = { "姓名": staff.name, "學校": this.getSchoolName(staff.defaultSchoolId), "總計": 0 }; let total = 0; for(let i=0; i<12; i++) { const days = details[i].map(d => d.day).join(', '); row[`${i+1}月`] = days; total += details[i].length; } row["總計"] = total; data.push(row); }); var filename = `年假總覽_${year}.xlsx`; } else { this.sortedStaffList.forEach(staff => { const row = { "姓名": staff.name, "學校": this.getSchoolName(staff.defaultSchoolId) }; this.leaveMonthDays.forEach(d => { const info = this.getLeaveInfo(staff.id, d.fullDate); row[`${d.dateNum} (${d.weekDay})`] = info ? (info.isAnnual ? '年假' : info.note) : ''; }); data.push(row); }); var filename = `年假月表_${year}_${this.leaveRosterCursor.getMonth()+1}.xlsx`; } const ws = XLSX.utils.json_to_sheet(data); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "LeaveData"); XLSX.writeFile(wb, filename); },
+            exportPDF() { const elementId = this.leaveViewMode === 'year' ? 'year-view-table' : 'month-view-table'; const element = document.getElementById(elementId); if(!element) return; html2canvas(element.parentElement, { scale: 2, backgroundColor: '#ffffff' }).then(canvas => { const imgData = canvas.toDataURL('image/png'); const pdf = new jspdf.jsPDF({ orientation: 'landscape' }); const imgProps = pdf.getImageProperties(imgData); const pdfWidth = pdf.internal.pageSize.getWidth(); const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width; const dateStr = this.leaveViewMode === 'year' ? `${this.leaveRosterCursor.getFullYear()}年` : this.formatMonthYear(this.leaveRosterCursor); pdf.setFontSize(18); pdf.text(`腓利清潔 - 年假排表 (${dateStr})`, 14, 15); pdf.addImage(imgData, 'PNG', 0, 25, pdfWidth, pdfHeight); pdf.save(`年假表_${this.leaveViewMode}.pdf`); }); },
+            getYearlyLeaveDetail(staffId) { const year = this.leaveRosterCursor.getFullYear(); const detail = Array(12).fill().map(() => []); this.events.forEach(e => { if(e.type === 'leave' && e.staffId === staffId) { const d = new Date(e.date); if(d.getFullYear() === year) { detail[d.getMonth()].push({ day: d.getDate(), isAnnual: e.note.includes('年假') }); } } }); detail.forEach(m => m.sort((a,b) => a.day - b.day)); return detail; },
+            getYearlyLeaveStats(staffId) { const year = this.leaveRosterCursor.getFullYear(); const stats = Array(12).fill(0); this.events.forEach(e => { if(e.type === 'leave' && e.staffId === staffId) { const d = new Date(e.date); if(d.getFullYear() === year) { stats[d.getMonth()]++; } } }); return stats; },
+            changeLeaveYear(d) { this.leaveRosterCursor = new Date(this.leaveRosterCursor.getFullYear() + d, this.leaveRosterCursor.getMonth(), 1); },
+            getActiveStaffCount(date) { return this.staffList.length - this.getLeaveCount(date); },
+            getLeaveCount(date) { return this.events.filter(e => e.type === 'leave' && e.date === date).length; },
+            getDailyLeaves(date) { return this.events.filter(e => e.type === 'leave' && e.date === date); },
+            getStaffSchoolId(staffId) { const s = this.staffList.find(x => x.id === staffId); return s ? s.defaultSchoolId : ''; },
+            formatMonthYear(d) { return d.getFullYear()+'年 '+(d.getMonth()+1)+'月'; },
+
+            startEdit(group) { this.editingKey = group.key; const originalStaffIds = this.rosterData.filter(r => group.ids.includes(r.id)).map(r => r.staffId); this.editForm = { ids: group.ids, schoolId: group.schoolId, staffIds: [...new Set(originalStaffIds)], startTime: group.startTime, endTime: group.endTime, jobContent: group.jobContent, note: group.note }; },
+            cancelEdit() { this.editingKey = null; },
+            saveEdit() { 
+                if (this.editForm.staffIds.length === 0 || !this.editForm.schoolId) return this.showModal('請選擇員工與學校', 'info'); 
+                this.rosterData = this.rosterData.filter(r => !this.editForm.ids.includes(r.id)); this.editForm.staffIds.forEach(id => { this.rosterData.push({ id: Date.now() + Math.random(), date: this.rosterDate, staffId: id, schoolId: this.editForm.schoolId, startTime: this.editForm.startTime, endTime: this.editForm.endTime, jobContent: this.editForm.jobContent, note: this.editForm.note }); }); this.editingKey = null; 
+            },
+            getStaffBySchool(schoolId) { if (!schoolId) return []; const targetName = this.getSchoolName(schoolId); return this.staffList.filter(s => { const sn = this.getSchoolName(s.defaultSchoolId); return sn === targetName || sn === '通用' || sn === '流動組' || sn === '總部'; }); },
+            globalClick() { this.showStaffDropdown = false; this.closeContextMenu(); }, 
+            showContextMenu(event, staffId, date) { const leave = this.events.find(e => e.type === 'leave' && e.staffId === staffId && e.date === date); this.contextMenu = { visible: true, x: event.clientX, y: event.clientY, staffId: staffId, date: date, hasLeave: !!leave }; },
+            closeContextMenu() { this.contextMenu.visible = false; },
+            
+            deleteFromMenu() { 
+                const idx = this.events.findIndex(e => e.type === 'leave' && e.staffId === this.contextMenu.staffId && e.date === this.contextMenu.date); 
+                if(idx !== -1) {
+                    this.showModal(`確定刪除此紀錄？`, 'confirm', () => {
+                        this.events.splice(idx, 1);
+                    });
+                }
+                this.closeContextMenu(); 
+            },
+            addFromMenu() { this.quickAddAnnualLeave(this.contextMenu.staffId, this.contextMenu.date); this.closeContextMenu(); },
+            
+            getEventTooltip(evt) { if (evt.type === 'leave') return `[請假] ${this.getStaffName(evt.staffId)}: ${evt.note}`; if (evt.type === 'school_holiday') return `[假期] ${this.getSchoolName(evt.schoolId)}: ${evt.note}`; if (evt.type === 'memo') return `[備忘] ${evt.note}`; return ''; },
+            getSchoolName(idOrName) { if (!idOrName) return '通用'; const s = this.schoolList.find(x => x.id === idOrName); return s ? s.name : idOrName; },
+            changeMonth(d) { this.calendarCursor = new Date(this.calendarCursor.getFullYear(), this.calendarCursor.getMonth()+d, 1); },
+            changeLeaveMonth(d) { this.leaveRosterCursor = new Date(this.leaveRosterCursor.getFullYear(), this.leaveRosterCursor.getMonth()+d, 1); },
+            resetToToday() { this.calendarCursor = new Date(); this.leaveRosterCursor = new Date(); },
+            isToday(d) { return d === new Date().toISOString().split('T')[0]; },
+            jumpToRoster(date) { this.rosterDate = date; this.currentTab = 'roster'; },
+            hasRoster(date) { return this.rosterData.some(r => r.date === date); },
+            getStaffName(id) { const s = this.staffList.find(x=>x.id===id); return s ? s.name : id; },
+            isNewSchoolGroup(index) { if (index === 0) return false; return this.getSchoolName(this.sortedStaffList[index].defaultSchoolId) !== this.getSchoolName(this.sortedStaffList[index - 1].defaultSchoolId); },
+            onStaffChange() { const staff = this.staffList.find(s => s.id === this.newEvent.staffId); if (staff && staff.defaultSchoolId) { this.newEvent.schoolId = staff.defaultSchoolId; } else { this.newEvent.schoolId = ''; } },
+            getLeaveInfo(staffId, date) { const leave = this.events.find(e => e.type === 'leave' && e.staffId === staffId && e.date === date); if (leave) return { type: 'leave', note: leave.note, isAnnual: leave.note.includes('年假') }; const staff = this.staffList.find(s => s.id === staffId); if (staff && staff.defaultSchoolId) { const holiday = this.events.find(e => { if (e.type !== 'school_holiday' || e.date !== date) return false; if (!e.schoolId) return true; const eventSchoolName = this.getSchoolName(e.schoolId); return eventSchoolName === this.getSchoolName(staff.defaultSchoolId); }); if (holiday) return { type: 'school_holiday', note: holiday.note }; } return null; },
+            
+            quickAddAnnualLeave(staffId, date) { 
+                const existingIndex = this.events.findIndex(e => e.type === 'leave' && e.staffId === staffId && e.date === date); 
+                if (existingIndex !== -1) { 
+                    this.showModal(`刪除 ${this.getStaffName(staffId)} 於 ${date} 的請假紀錄？`, 'confirm', () => {
+                        this.events.splice(existingIndex, 1);
+                    });
+                    return; 
+                } 
+                this.showModal(`確認為 ${this.getStaffName(staffId)} 於 ${date} 新增「年假」？`, 'confirm', () => {
+                    const staff = this.staffList.find(s => s.id === staffId); 
+                    const schoolId = staff ? staff.defaultSchoolId : ''; 
+                    this.events.push({ date: date, type: 'leave', staffId: staffId, schoolId: schoolId, note: '年假' });
+                });
+            },
+            
+            deleteLeaveByCell(staffId, date) { 
+                const existingIndex = this.events.findIndex(e => e.type === 'leave' && e.staffId === staffId && e.date === date); 
+                if (existingIndex !== -1) { 
+                    this.showModal('確定刪除此請假紀錄？', 'confirm', () => {
+                        this.events.splice(existingIndex, 1);
+                    });
+                } 
+            },
+            addPreset(type) { if(type==='holiday'&&this.newHolidayPreset){this.holidayPresets.push(this.newHolidayPreset);this.newHolidayPreset=''} if(type==='memo'&&this.newMemoPreset){this.memoPresets.push(this.newMemoPreset);this.newMemoPreset=''} if(type==='leave'&&this.newLeavePreset){this.leavePresets.push(this.newLeavePreset);this.newLeavePreset=''} if(type==='rosterNote'&&this.newRosterNotePreset){this.rosterNotePresets.push(this.newRosterNotePreset);this.newRosterNotePreset=''} },
+            
+            removePreset(type, i) { 
+                this.showModal('確定刪除此預設選項?', 'confirm', () => {
+                    if(type==='holiday') this.holidayPresets.splice(i,1); 
+                    if(type==='memo') this.memoPresets.splice(i,1); 
+                    if(type==='leave') this.leavePresets.splice(i,1); 
+                    if(type==='rosterNote') this.rosterNotePresets.splice(i,1); 
+                });
+            },
+            
+            addTimePreset() { if(this.newTimePreset.label && this.newTimePreset.start) { this.timePresets.push({...this.newTimePreset}); this.newTimePreset={label:'',start:'',end:''}; } },
+            
+            removeTimePreset(i) { 
+                this.showModal('確定刪除此時間預設?', 'confirm', () => {
+                    this.timePresets.splice(i, 1); 
+                });
+            },
+            
+            applyTime(t) { this.inputForm.startTime = t.start; this.inputForm.endTime = t.end; },
+            
+            addSchool() { if(this.newSchoolName) this.schoolList.push({id:'SCH'+(this.schoolList.length+1), name:this.newSchoolName}); this.newSchoolName=''; },
+            
+            removeSchool(index) { 
+                const sName = this.schoolList[index].name; 
+                this.showModal(`警告：刪除學校【${sName}】可能會影響歷史紀錄。確定要繼續刪除嗎？`, 'confirm', () => {
+                    this.schoolList.splice(index, 1);
+                });
+            },
+            
+            addStaff() { if(this.newStaff.name) this.staffList.push({id:'S'+(this.staffList.length+1), ...this.newStaff}); this.newStaff.name=''; this.newStaff.defaultSchoolId=''; },
+            
+            removeStaff(index) { 
+                const sName = this.staffList[index].name; 
+                this.showModal(`警告：刪除員工【${sName}】可能會影響歷史紀錄。確定要繼續刪除嗎？`, 'confirm', () => {
+                    this.staffList.splice(index, 1);
+                });
+            },
+            
+            addEvent() { 
+                if(!this.newEvent.date || !this.newEvent.note) return this.showModal('資料不全', 'info'); 
+                this.events.push({...this.newEvent}); 
+                this.showModal('已新增', 'info'); 
+            },
+            
+            deleteEvent(idx) { 
+                this.showModal('確定刪除此事件？', 'confirm', () => {
+                    this.events.splice(idx, 1); 
+                });
+            },
+            
+            batchDeleteEvents() {
+                this.showModal(`確定要清空 ${this.eventListMonth} 月份的所有事件嗎？此操作無法復原。`, 'confirm', () => {
+                    this.events = this.events.filter(e => !e.date.startsWith(this.eventListMonth));
+                    this.showModal('已清空該月事件', 'info');
+                });
+            },
+            
+            addRoster() { 
+                if (this.inputForm.staffIds.length === 0 || !this.inputForm.schoolId) return this.showModal('請選擇員工與學校', 'info'); 
+                
+                // Check conflicts logic wrapper
+                const conflictingStaff = []; 
+                this.inputForm.staffIds.forEach(id => { 
+                    const onLeave = this.events.find(e => e.type === 'leave' && e.staffId === id && e.date === this.rosterDate); 
+                    if (onLeave) conflictingStaff.push(this.getStaffName(id)); 
+                }); 
+                
+                const proceed = () => {
+                    const wage = this.calculateWage(this.inputForm.startTime, this.inputForm.endTime);
+                    const totalTransport = parseFloat(this.inputForm.transport) || 0;
+                    const headCount = this.inputForm.staffIds.length;
+                    const baseTransport = Math.floor(totalTransport / headCount);
+                    const remainder = totalTransport % headCount;
+                    this.inputForm.staffIds.forEach((id, index) => { const myTransport = baseTransport + (index < remainder ? 1 : 0); this.rosterData.push({ id: Date.now() + Math.random(), date: this.rosterDate, staffId: id, schoolId: this.inputForm.schoolId, startTime: this.inputForm.startTime, endTime: this.inputForm.endTime, jobContent: this.inputForm.jobContent, note: this.inputForm.note, wage: wage, transport: myTransport }); }); 
+                    this.inputForm.staffIds = []; this.inputForm.transport = 0; 
+                    this.showModal('已加入排程', 'info');
+                };
+
+                if (conflictingStaff.length > 0) { 
+                    this.showModal(`警告：員工 ${conflictingStaff.join(', ')} 當天已請假。確定要排班嗎？`, 'confirm', proceed);
+                } else {
+                    proceed();
+                }
+            },
+            
+            deleteGroup(ids) { 
+                this.showModal('確定刪除此組排班？', 'confirm', () => {
+                    this.rosterData = this.rosterData.filter(r => !ids.includes(r.id)); 
+                });
+            },
+            
+            deleteRoster(id) { this.rosterData = this.rosterData.filter(r => r.id !== id); },
+            
+            clearDailyRoster() { 
+                this.showModal(`確定清除 ${this.rosterDate} 的所有排班紀錄？`, 'confirm', () => {
+                    this.rosterData = this.rosterData.filter(r => r.date !== this.rosterDate); 
+                });
+            }
+        }
+    }).mount('#app');
+</script>
+
+</body>
+</html>
