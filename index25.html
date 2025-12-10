@@ -1138,7 +1138,7 @@
             leaveMonthDays() { const year = this.leaveRosterCursor.getFullYear(), month = this.leaveRosterCursor.getMonth(); const daysInMonth = new Date(year, month + 1, 0).getDate(); const weekMap = ['日','一','二','三','四','五','六']; let days = []; for(let i=1; i<=daysInMonth; i++) { const d = `${year}-${String(month+1).padStart(2,'0')}-${String(i).padStart(2,'0')}`; const dayObj = new Date(d); days.push({ dateNum: i, weekDay: weekMap[dayObj.getDay()], fullDate: d, isWeekend: (dayObj.getDay()===0 || dayObj.getDay()===6) }); } return days; }
         },
         methods: {
-            doLogin() { if(this.loginData.id === 'philip' && this.loginData.pw === '60986314') { this.isLoggedIn = true; this.loginError = false; } else { this.loginError = true; } },
+            doLogin() { if(this.loginData.id === 'philip' && this.loginData.pw === '60986314') { this.isLoggedIn = true; this.loginError = false; this.loadFromFirebase(); } else { this.loginError = true; } },
             logout() { this.isLoggedIn = false; this.loginData = {id:'', pw:''}; },
 
             // Firebase 同步方法
