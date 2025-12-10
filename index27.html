@@ -1,0 +1,439 @@
+import React, { useState, useEffect } from 'react';
+import { Check, Calendar, Users, ClipboardList, Printer, ChevronDown, ChevronUp, AlertCircle, Save } from 'lucide-react';
+
+// 定義資料結構
+type Task = {
+  id: string;
+  text: string;
+  completed: boolean;
+  isHighLevel?: boolean; // 是否為高空/重點清潔
+};
+
+type Session = {
+  title: string;
+  time: string;
+  tasks: Task[];
+};
+
+type DaySchedule = {
+  day: number;
+  title: string;
+  focus: string;
+  staffGroupA: string;
+  staffGroupB: string;
+  notes: string;
+  morning: Session;
+  afternoon: Session;
+};
+
+const CleaningLogApp = () => {
+  // 初始資料設定
+  const initialData: DaySchedule[] = [
+    {
+      day: 1,
+      title: "第一天：衛生設施與高空清潔",
+      focus: "洗手間高空清潔及高層實驗室",
+      staffGroupA: "",
+      staffGroupB: "",
+      notes: "",
+      morning: {
+        title: "上午 (09:00 - 13:00)",
+        time: "09:00-13:00",
+        tasks: [
+          { id: "d1-m-1", text: "全校 12 個洗手間清潔 (天花/喉管/氣窗)", completed: false, isHighLevel: true },
+          { id: "d1-m-2", text: "2 個更衣室清潔 (天花/喉管/氣窗)", completed: false, isHighLevel: true },
+          { id: "d1-m-3", text: "拆洗抽氣扇及風扇 (洗手間/更衣室)", completed: false, isHighLevel: true },
+        ]
+      },
+      afternoon: {
+        title: "下午 (14:00 - 18:00)",
+        time: "14:00-18:00",
+        tasks: [
+          { id: "d1-a-1", text: "A組: 5/F 化學室、科學室 (含準備室)", completed: false },
+          { id: "d1-a-2", text: "B組: 4/F 生物室、物理室 (含準備室)", completed: false },
+          { id: "d1-a-3", text: "實驗室氣窗、風扇、拖地", completed: false },
+        ]
+      }
+    },
+    {
+      day: 2,
+      title: "第二天：高層課室與圖書館",
+      focus: "4/F-5/F 課室及 3/F 大型特別室",
+      staffGroupA: "",
+      staffGroupB: "",
+      notes: "",
+      morning: {
+        title: "上午 (09:00 - 13:00)",
+        time: "09:00-13:00",
+        tasks: [
+          { id: "d2-m-1", text: "A組: 5/F 課室 (501-507，共7間)", completed: false },
+          { id: "d2-m-2", text: "B組: 4/F 課室 (401-406，共6間)", completed: false },
+          { id: "d2-m-3", text: "課室百葉簾、氣窗、風扇清潔", completed: false },
+        ]
+      },
+      afternoon: {
+        title: "下午 (14:00 - 18:00)",
+        time: "14:00-18:00",
+        tasks: [
+          { id: "d2-a-1", text: "3/F 圖書館書架除塵 (小心書籍)", completed: false },
+          { id: "d2-a-2", text: "3/F 地理室清潔", completed: false },
+          { id: "d2-a-3", text: "圖書館及地理室地板清潔", completed: false },
+        ]
+      }
+    },
+    {
+      day: 3,
+      title: "第三天：中層課室與術科特別室",
+      focus: "2/F-3/F 課室及家政區域",
+      staffGroupA: "",
+      staffGroupB: "",
+      notes: "",
+      morning: {
+        title: "上午 (09:00 - 13:00)",
+        time: "09:00-13:00",
+        tasks: [
+          { id: "d3-m-1", text: "A組: 3/F 課室 (301-306，共6間)", completed: false },
+          { id: "d3-m-2", text: "B組: 2/F 課室 (201-206，共6間)", completed: false },
+        ]
+      },
+      afternoon: {
+        title: "下午 (14:00 - 18:00)",
+        time: "14:00-18:00",
+        tasks: [
+          { id: "d3-a-1", text: "A組: 2/F 縫紉室 (除塵)", completed: false },
+          { id: "d3-a-2", text: "A組: 2/F 家政室 (去頑固污漬)", completed: false },
+          { id: "d3-a-3", text: "B組: 2/F 輔導室", completed: false },
+          { id: "d3-a-4", text: "B組: 1/F 音樂室", completed: false },
+        ]
+      }
+    },
+    {
+      day: 4,
+      title: "第四天：低層設施與藝術/科技室",
+      focus: "1/F 剩餘課室及 G/F 大型特別室",
+      staffGroupA: "",
+      staffGroupB: "",
+      notes: "",
+      morning: {
+        title: "上午 (09:00 - 13:00)",
+        time: "09:00-13:00",
+        tasks: [
+          { id: "d4-m-1", text: "A組: 1/F 視藝室", completed: false },
+          { id: "d4-m-2", text: "A組: 1/F 101室", completed: false },
+          { id: "d4-m-3", text: "B組: G/F 設計與科技室 (DT)", completed: false },
+          { id: "d4-m-4", text: "B組: G01室", completed: false },
+        ]
+      },
+      afternoon: {
+        title: "下午 (14:00 - 18:00)",
+        time: "14:00-18:00",
+        tasks: [
+          { id: "d4-a-1", text: "G/F 健身室 (地板消毒，避開器材)", completed: false },
+          { id: "d4-a-2", text: "SAC室 (玻璃窗清潔)", completed: false },
+        ]
+      }
+    },
+    {
+      day: 5,
+      title: "第五天：行政區域與總結",
+      focus: "教員室、校務處及總驗收",
+      staffGroupA: "",
+      staffGroupB: "",
+      notes: "",
+      morning: {
+        title: "上午 (09:00 - 13:00)",
+        time: "09:00-13:00",
+        tasks: [
+          { id: "d5-m-1", text: "4 間教員室清潔 (只清潔桌面空白處)", completed: false },
+          { id: "d5-m-2", text: "教員室地面及百葉簾", completed: false },
+          { id: "d5-m-3", text: "走廊及公用位置支援", completed: false },
+        ]
+      },
+      afternoon: {
+        title: "下午 (14:00 - 18:00)",
+        time: "14:00-18:00",
+        tasks: [
+          { id: "d5-a-1", text: "校務處清潔", completed: false },
+          { id: "d5-a-2", text: "會客室清潔", completed: false },
+          { id: "d5-a-3", text: "整理所有清潔工具", completed: false },
+          { id: "d5-a-4", text: "主管巡查總驗收 (燈盤/風扇/角落)", completed: false },
+          { id: "d5-a-5", text: "向校務處報備並提交證明書", completed: false },
+        ]
+      }
+    }
+  ];
+
+  // State
+  const [activeTab, setActiveTab] = useState(1);
+  const [schedule, setSchedule] = useState<DaySchedule[]>(initialData);
+  const [projectInfo, setProjectInfo] = useState({
+    startDate: "2025-12-22",
+    supervisor: "",
+    company: "腓利清潔服務有限公司"
+  });
+  const [isPrinting, setIsPrinting] = useState(false);
+
+  // Handlers
+  const toggleTask = (dayIndex: number, sessionKey: 'morning' | 'afternoon', taskId: string) => {
+    const newSchedule = [...schedule];
+    const session = newSchedule[dayIndex][sessionKey];
+    const task = session.tasks.find(t => t.id === taskId);
+    if (task) {
+      task.completed = !task.completed;
+      setSchedule(newSchedule);
+    }
+  };
+
+  const updateDayInfo = (dayIndex: number, field: 'staffGroupA' | 'staffGroupB' | 'notes', value: string) => {
+    const newSchedule = [...schedule];
+    newSchedule[dayIndex][field] = value;
+    setSchedule(newSchedule);
+  };
+
+  const calculateProgress = () => {
+    let total = 0;
+    let completed = 0;
+    schedule.forEach(day => {
+      day.morning.tasks.forEach(t => { total++; if (t.completed) completed++; });
+      day.afternoon.tasks.forEach(t => { total++; if (t.completed) completed++; });
+    });
+    return Math.round((completed / total) * 100);
+  };
+
+  const handlePrint = () => {
+    setIsPrinting(true);
+    setTimeout(() => {
+      window.print();
+      setIsPrinting(false);
+    }, 100);
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 text-gray-800 font-sans">
+      {/* Header Section - No Print Background for cleaner print */}
+      <div className="bg-blue-700 text-white p-6 print:bg-white print:text-black print:p-0 print:border-b-2 print:border-black">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex justify-between items-start">
+            <div>
+              <h1 className="text-2xl font-bold mb-2">仁濟醫院林百欣中學 - 聖誕節長假期清潔工作日誌</h1>
+              <p className="opacity-90 text-sm print:hidden">請輸入每日工作進度及人員安排，完成後可列印簽核。</p>
+            </div>
+            <div className="text-right hidden md:block print:block">
+              <p className="text-sm font-semibold">{projectInfo.company}</p>
+              <p className="text-xs opacity-75">合約編號: 2025-2026/CLEANING</p>
+            </div>
+          </div>
+          
+          {/* Project Meta Inputs */}
+          <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4 print:grid-cols-3 print:gap-2 print:mt-2">
+            <div className="bg-blue-800 p-3 rounded-lg print:bg-transparent print:p-0 print:border print:border-gray-300">
+              <label className="block text-xs uppercase tracking-wide opacity-75 mb-1">開始日期</label>
+              <input 
+                type="date" 
+                value={projectInfo.startDate}
+                onChange={(e) => setProjectInfo({...projectInfo, startDate: e.target.value})}
+                className="w-full bg-transparent border-b border-blue-400 focus:outline-none focus:border-white text-white font-medium print:text-black print:border-none"
+              />
+            </div>
+            <div className="bg-blue-800 p-3 rounded-lg print:bg-transparent print:p-0 print:border print:border-gray-300">
+              <label className="block text-xs uppercase tracking-wide opacity-75 mb-1">現場主管</label>
+              <input 
+                type="text" 
+                placeholder="輸入主管姓名"
+                value={projectInfo.supervisor}
+                onChange={(e) => setProjectInfo({...projectInfo, supervisor: e.target.value})}
+                className="w-full bg-transparent border-b border-blue-400 focus:outline-none focus:border-white text-white font-medium placeholder-blue-300 print:text-black print:border-none"
+              />
+            </div>
+            <div className="bg-blue-800 p-3 rounded-lg flex items-center justify-between print:hidden">
+              <div>
+                <label className="block text-xs uppercase tracking-wide opacity-75 mb-1">總體進度</label>
+                <div className="text-lg font-bold">{calculateProgress()}%</div>
+              </div>
+              <div className="h-8 w-8 rounded-full border-2 border-white flex items-center justify-center">
+                <div className="h-6 w-6 rounded-full bg-green-400" style={{ opacity: calculateProgress() / 100 }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="max-w-4xl mx-auto p-4 print:p-0 print:w-full">
+        
+        {/* Print Controls */}
+        <div className="mb-6 flex justify-between items-center print:hidden">
+          <div className="flex space-x-2 overflow-x-auto pb-2">
+            {[1, 2, 3, 4, 5].map(day => (
+              <button
+                key={day}
+                onClick={() => setActiveTab(day)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                  activeTab === day 
+                    ? 'bg-blue-600 text-white shadow-md' 
+                    : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                }`}
+              >
+                第 {day} 天
+              </button>
+            ))}
+            <button
+              onClick={() => setActiveTab(6)}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors whitespace-nowrap ${
+                activeTab === 6 
+                  ? 'bg-green-600 text-white shadow-md' 
+                  : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+              }`}
+            >
+              總覽與報告
+            </button>
+          </div>
+          <button 
+            onClick={handlePrint}
+            className="flex items-center space-x-2 bg-gray-800 text-white px-4 py-2 rounded-lg hover:bg-gray-700 transition-colors shadow-sm"
+          >
+            <Printer size={18} />
+            <span>列印 / 存檔</span>
+          </button>
+        </div>
+
+        {/* Schedule Content */}
+        <div className="space-y-6">
+          {schedule.map((day, index) => (
+            <div 
+              key={day.day} 
+              className={`${activeTab !== day.day && activeTab !== 6 ? 'hidden' : 'block'} bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden print:shadow-none print:border-b print:border-gray-300 print:mb-8 print:block print:rounded-none break-inside-avoid`}
+            >
+              {/* Day Header */}
+              <div className="bg-gray-50 p-4 border-b border-gray-200 flex justify-between items-center print:bg-gray-100">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                    <span className="bg-blue-100 text-blue-800 text-xs font-bold px-2 py-1 rounded mr-2">DAY {day.day}</span>
+                    {day.title}
+                  </h2>
+                  <p className="text-sm text-gray-500 mt-1 flex items-center">
+                    <AlertCircle size={14} className="mr-1 text-orange-500" />
+                    重點：{day.focus}
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-0">
+                {/* Morning Session */}
+                <div className="p-4 border-b border-gray-100">
+                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center">
+                    <span className="w-2 h-2 bg-yellow-400 rounded-full mr-2"></span>
+                    {day.morning.title}
+                  </h3>
+                  <div className="space-y-2">
+                    {day.morning.tasks.map(task => (
+                      <label key={task.id} className="flex items-start p-2 hover:bg-gray-50 rounded cursor-pointer group">
+                        <div className="relative flex items-center mt-0.5">
+                          <input 
+                            type="checkbox" 
+                            checked={task.completed}
+                            onChange={() => toggleTask(index, 'morning', task.id)}
+                            className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                        </div>
+                        <div className="ml-3 text-sm">
+                          <span className={`${task.completed ? 'text-gray-400 line-through' : 'text-gray-700'} ${task.isHighLevel ? 'font-semibold text-blue-900' : ''}`}>
+                            {task.text}
+                          </span>
+                          {task.isHighLevel && (
+                            <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium bg-red-100 text-red-800">
+                              高空工作
+                            </span>
+                          )}
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Afternoon Session */}
+                <div className="p-4 border-b border-gray-100">
+                  <h3 className="text-sm font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center">
+                    <span className="w-2 h-2 bg-orange-400 rounded-full mr-2"></span>
+                    {day.afternoon.title}
+                  </h3>
+                  <div className="space-y-2">
+                    {day.afternoon.tasks.map(task => (
+                      <label key={task.id} className="flex items-start p-2 hover:bg-gray-50 rounded cursor-pointer group">
+                        <div className="relative flex items-center mt-0.5">
+                          <input 
+                            type="checkbox" 
+                            checked={task.completed}
+                            onChange={() => toggleTask(index, 'afternoon', task.id)}
+                            className="w-5 h-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
+                        </div>
+                        <div className="ml-3 text-sm">
+                          <span className={`${task.completed ? 'text-gray-400 line-through' : 'text-gray-700'}`}>
+                            {task.text}
+                          </span>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Staff & Notes Input */}
+                <div className="p-4 bg-gray-50 grid grid-cols-1 md:grid-cols-2 gap-4 print:grid-cols-2">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">A 組人員 (負責區域)</label>
+                    <input 
+                      type="text" 
+                      placeholder="例如：陳大文, 李小明"
+                      value={day.staffGroupA}
+                      onChange={(e) => updateDayInfo(index, 'staffGroupA', e.target.value)}
+                      className="w-full text-sm p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 print:border-none print:bg-transparent print:p-0 print:border-b print:border-gray-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">B 組人員 (負責區域)</label>
+                    <input 
+                      type="text" 
+                      placeholder="例如：張志強, 王美玲, 林伯"
+                      value={day.staffGroupB}
+                      onChange={(e) => updateDayInfo(index, 'staffGroupB', e.target.value)}
+                      className="w-full text-sm p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 print:border-none print:bg-transparent print:p-0 print:border-b print:border-gray-400"
+                    />
+                  </div>
+                  <div className="md:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-500 mb-1">當日備註 / 異常記錄</label>
+                    <textarea 
+                      placeholder="記錄未完成事項、損壞發現或特殊情況..."
+                      value={day.notes}
+                      onChange={(e) => updateDayInfo(index, 'notes', e.target.value)}
+                      rows={2}
+                      className="w-full text-sm p-2 border border-gray-300 rounded focus:outline-none focus:border-blue-500 print:border-none print:bg-transparent print:p-0 print:border-b print:border-gray-400 resize-none"
+                    ></textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+
+          {/* Signature Section for Print */}
+          <div className="hidden print:block mt-8 pt-8 border-t-2 border-gray-300 break-inside-avoid">
+            <div className="flex justify-between">
+              <div className="w-1/3">
+                <p className="text-sm font-bold mb-8">承辦商主管簽署：</p>
+                <div className="border-b border-black h-8"></div>
+                <p className="text-xs mt-1">日期：</p>
+              </div>
+              <div className="w-1/3">
+                <p className="text-sm font-bold mb-8">校方代表確認：</p>
+                <div className="border-b border-black h-8"></div>
+                <p className="text-xs mt-1">日期：</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default CleaningLogApp;
